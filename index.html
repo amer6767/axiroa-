@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="FRONTLINE — Multiplayer Real-Time Strategy Game">
+<title>FRONTLINE — RTS</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0e17;--surface:#111827;--surface2:#1e293b;--accent:#38bdf8;--accent2:#818cf8;
+  --green:#22c55e;--red:#ef4444;--gold:#fbbf24;--text:#e2e8f0;--dim:#64748b;
+  --glass:rgba(17,24,39,.72);--border:rgba(56,189,248,.15);
+  --gradient:linear-gradient(135deg,#38bdf8,#818cf8);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;overflow:hidden}
+
+/* ─── LOBBY ───────────────────────────────────────── */
+#lobby{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;position:relative;z-index:10;
+}
+#lobby.hidden{display:none}
+.lobby-bg{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e17 0%,#1a1040 40%,#0a0e17 100%);z-index:-1}
+.lobby-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(56,189,248,.08),transparent 60%)}
+.logo{font-family:'Orbitron',sans-serif;font-size:4rem;font-weight:900;letter-spacing:.15em;
+  background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  text-shadow:0 0 60px rgba(56,189,248,.3);margin-bottom:.25rem;animation:glowPulse 3s ease-in-out infinite alternate}
+.logo-sub{font-size:.9rem;color:var(--dim);letter-spacing:.6em;text-transform:uppercase;margin-bottom:3rem}
+@keyframes glowPulse{0%{filter:drop-shadow(0 0 8px rgba(56,189,248,.3))}100%{filter:drop-shadow(0 0 24px rgba(129,140,248,.6))}}
+
+.lobby-card{
+  background:var(--glass);border:1px solid var(--border);border-radius:1rem;
+  padding:2.5rem;width:min(420px,90vw);backdrop-filter:blur(24px);
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+}
+.lobby-card h2{font-family:'Orbitron',sans-serif;font-size:1.1rem;letter-spacing:.12em;margin-bottom:1.5rem;color:var(--accent)}
+.field{margin-bottom:1.2rem}
+.field label{display:block;font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.4rem}
+.field input{
+  width:100%;background:var(--surface);border:1px solid var(--border);border-radius:.5rem;
+  padding:.7rem 1rem;color:var(--text);font-size:1rem;font-family:'Inter',sans-serif;
+  outline:none;transition:border .2s;
+}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+.btn{
+  width:100%;padding:.8rem;border:none;border-radius:.5rem;cursor:pointer;
+  font-family:'Orbitron',sans-serif;font-size:.85rem;letter-spacing:.12em;
+  transition:all .2s;position:relative;overflow:hidden;
+}
+.btn-primary{background:var(--gradient);color:#0a0e17;font-weight:700}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(56,189,248,.35)}
+.btn-secondary{background:transparent;border:1px solid var(--border);color:var(--accent);margin-top:.6rem}
+.btn-secondary:hover{background:rgba(56,189,248,.08);border-color:var(--accent)}
+.divider{display:flex;align-items:center;gap:.8rem;margin:1.5rem 0;color:var(--dim);font-size:.75rem}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.error-msg{color:var(--red);font-size:.8rem;margin-top:.5rem;min-height:1.2rem}
+
+/* ─── WAITING ROOM ────────────────────────────────── */
+#waitingRoom{display:none;flex-direction:column;align-items:center;justify-content:center;height:100%;position:relative;z-index:10}
+#waitingRoom.show{display:flex}
+.room-code-display{font-family:'Orbitron',sans-serif;font-size:2.5rem;letter-spacing:.3em;
+  background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:.5rem 0}
+.player-list{list-style:none;padding:0;margin:1.5rem 0;width:100%}
+.player-list li{
+  display:flex;align-items:center;gap:.8rem;padding:.6rem 1rem;
+  border-radius:.5rem;margin-bottom:.4rem;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.05);font-size:.9rem;
+}
+.player-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.host-badge{font-size:.65rem;background:var(--gold);color:#000;padding:2px 8px;border-radius:10rem;font-weight:600;margin-left:auto}
+
+/* ─── GAME SCREEN ─────────────────────────────────── */
+#gameScreen{display:none;position:relative;width:100%;height:100%}
+#gameScreen.show{display:block}
+#gameCanvas{display:block;width:100%;height:100%;cursor:crosshair}
+
+/* ─── HUD ─────────────────────────────────────────── */
+#hud{
+  position:absolute;top:0;left:0;right:0;display:flex;align-items:center;
+  padding:.6rem 1.2rem;background:linear-gradient(180deg,rgba(10,14,23,.92),rgba(10,14,23,.6));
+  border-bottom:1px solid var(--border);gap:1.5rem;pointer-events:auto;z-index:20;
+}
+.hud-logo{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;
+  background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.res-group{display:flex;gap:1.2rem;flex:1;justify-content:center}
+.res-item{display:flex;align-items:center;gap:.35rem;font-size:.8rem;font-weight:500}
+.res-icon{width:18px;height:18px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:.65rem}
+.res-wood{background:#65a30d}.res-steel{background:#64748b}.res-fuel{background:#f59e0b}
+.res-supplies{background:#06b6d4}.res-research{background:#a855f7}
+
+/* ─── BOTTOM PANEL ────────────────────────────────── */
+#bottomPanel{
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  background:var(--glass);border:1px solid var(--border);border-bottom:none;
+  border-radius:1rem 1rem 0 0;backdrop-filter:blur(20px);
+  padding:1rem 1.5rem;display:flex;gap:1.2rem;z-index:20;pointer-events:auto;
+  max-width:95vw;overflow-x:auto;
+}
+.train-btn{
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+  padding:.5rem .7rem;border-radius:.6rem;border:1px solid var(--border);
+  background:rgba(255,255,255,.03);cursor:pointer;transition:all .15s;
+  min-width:68px;
+}
+.train-btn:hover{border-color:var(--accent);background:rgba(56,189,248,.08);transform:translateY(-2px)}
+.train-btn.disabled{opacity:.35;cursor:not-allowed;transform:none}
+.train-icon{font-size:1.4rem}
+.train-name{font-size:.55rem;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:600}
+.train-cost{font-size:.5rem;color:var(--dim)}
+
+/* ─── QUEUE DISPLAY ───────────────────────────────── */
+#queuePanel{
+  position:absolute;bottom:90px;right:12px;
+  background:var(--glass);border:1px solid var(--border);border-radius:.8rem;
+  backdrop-filter:blur(20px);padding:.8rem 1rem;z-index:20;pointer-events:auto;
+  min-width:160px;
+}
+#queuePanel.hidden{display:none}
+#queuePanel h3{font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:.1em;color:var(--accent);margin-bottom:.5rem}
+.queue-item{display:flex;align-items:center;gap:.5rem;font-size:.75rem;padding:.25rem 0}
+.queue-bar{flex:1;height:4px;background:var(--surface);border-radius:2px;overflow:hidden}
+.queue-bar-fill{height:100%;background:var(--gradient);border-radius:2px;transition:width .3s}
+
+/* ─── SELECTION INFO ──────────────────────────────── */
+#selectionInfo{
+  position:absolute;bottom:90px;left:12px;
+  background:var(--glass);border:1px solid var(--border);border-radius:.8rem;
+  backdrop-filter:blur(20px);padding:.8rem 1rem;z-index:20;pointer-events:auto;
+  min-width:180px;
+}
+#selectionInfo.hidden{display:none}
+#selectionInfo h3{font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:.1em;color:var(--accent);margin-bottom:.5rem}
+.sel-stat{font-size:.75rem;color:var(--dim);margin-bottom:.2rem}
+.sel-hp-bar{width:100%;height:5px;background:var(--surface);border-radius:3px;margin-top:.3rem;overflow:hidden}
+.sel-hp-fill{height:100%;background:var(--green);border-radius:3px;transition:width .3s}
+
+/* ─── MINIMAP ─────────────────────────────────────── */
+#minimap{
+  position:absolute;top:52px;right:12px;width:180px;height:180px;
+  background:var(--glass);border:1px solid var(--border);border-radius:.6rem;
+  overflow:hidden;z-index:20;pointer-events:auto;cursor:pointer;
+}
+#minimapCanvas{width:100%;height:100%;image-rendering:pixelated}
+
+/* ─── TOAST ───────────────────────────────────────── */
+#toasts{position:absolute;top:60px;left:50%;transform:translateX(-50%);z-index:50;display:flex;flex-direction:column;gap:.4rem;align-items:center;pointer-events:none}
+.toast{
+  background:var(--glass);border:1px solid var(--border);border-radius:.5rem;
+  padding:.5rem 1.2rem;font-size:.8rem;backdrop-filter:blur(12px);
+  animation:toastIn .3s ease,toastOut .3s ease 2.7s forwards;pointer-events:none;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateY(-10px)}}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ── LOBBY ───────────────────────────────────────── -->
+<div class="lobby-bg"></div>
+<div id="lobby">
+  <div class="logo">FRONTLINE</div>
+  <div class="logo-sub">Real-Time Strategy</div>
+  <div class="lobby-card">
+    <h2>Deploy</h2>
+    <div class="field">
+      <label>Commander Name</label>
+      <input id="nameInput" placeholder="Enter your callsign" maxlength="16" autocomplete="off">
+    </div>
+    <button class="btn btn-primary" id="createBtn">Create Room</button>
+    <div class="divider">OR JOIN</div>
+    <div class="field">
+      <label>Room Code</label>
+      <input id="codeInput" placeholder="6-character code" maxlength="6" autocomplete="off" style="text-transform:uppercase">
+    </div>
+    <button class="btn btn-secondary" id="joinBtn">Join Room</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+</div>
+
+<!-- ── WAITING ROOM ───────────────────────────────── -->
+<div id="waitingRoom">
+  <div class="lobby-card" style="text-align:center">
+    <h2>War Room</h2>
+    <div style="font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Room Code</div>
+    <div class="room-code-display" id="roomCodeDisplay">------</div>
+    <ul class="player-list" id="playerList"></ul>
+    <button class="btn btn-primary" id="startBtn" style="display:none">Launch Game</button>
+    <div style="font-size:.75rem;color:var(--dim);margin-top:.8rem" id="waitingMsg">Waiting for host to start...</div>
+  </div>
+</div>
+
+<!-- ── GAME SCREEN ────────────────────────────────── -->
+<div id="gameScreen">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-logo">FRONTLINE</div>
+    <div class="res-group">
+      <div class="res-item"><div class="res-icon res-wood">🪵</div><span id="resWood">0</span></div>
+      <div class="res-item"><div class="res-icon res-steel">⚙</div><span id="resSteel">0</span></div>
+      <div class="res-item"><div class="res-icon res-fuel">⛽</div><span id="resFuel">0</span></div>
+      <div class="res-item"><div class="res-icon res-supplies">📦</div><span id="resSupplies">0</span></div>
+      <div class="res-item"><div class="res-icon res-research">🔬</div><span id="resResearch">0</span></div>
+    </div>
+  </div>
+
+  <div id="minimap"><canvas id="minimapCanvas" width="180" height="180"></canvas></div>
+
+  <div id="selectionInfo" class="hidden">
+    <h3>Selected</h3>
+    <div id="selContent"></div>
+  </div>
+
+  <div id="queuePanel" class="hidden">
+    <h3>Training Queue</h3>
+    <div id="queueContent"></div>
+  </div>
+
+  <div id="bottomPanel"></div>
+
+  <div id="toasts"></div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(() => {
+'use strict';
+
+// ─── CONSTANTS ──────────────────────────────────────
+const MAP_SIZE = 80;
+const HEX_SIZE = 26;
+const HEX_W = Math.sqrt(3) * HEX_SIZE;
+const HEX_H = 2 * HEX_SIZE;
+
+const UNIT_ICONS = {
+  SCOUT:'🏃', ARCHER:'🏹', INFANTRY:'⚔️', TANK:'🛡️', ARTILLERY:'💣',
+  HELICOPTER:'🚁', MARINE:'🚢', EMP_DRONE:'⚡', DECOY:'👻'
+};
+const UNIT_TYPES = {
+  SCOUT:{cost:{wood:20},requiredZone:'forest'},
+  ARCHER:{cost:{wood:30,steel:10},requiredZone:'forest'},
+  INFANTRY:{cost:{steel:30},requiredZone:'factory'},
+  TANK:{cost:{steel:50,fuel:20},requiredZone:'factory'},
+  ARTILLERY:{cost:{fuel:40,steel:30},requiredZone:'oil'},
+  HELICOPTER:{cost:{fuel:60,steel:20},requiredZone:'oil'},
+  MARINE:{cost:{supplies:30,steel:20},requiredZone:'port'},
+  EMP_DRONE:{cost:{research:50,fuel:20},requiredZone:'lab'},
+  DECOY:{cost:{research:30},requiredZone:'lab'}
+};
+
+const TILE_COLOURS = {
+  0:'#1a2332', empty:'#1a2332',
+  forest:'#1b3a26', factory:'#3a2e1e', oil:'#2e2215',
+  port:'#152838', lab:'#2a1a3a'
+};
+
+// ─── STATE ──────────────────────────────────────────
+let socket, myId, isHost = false, roomCode = '';
+let map = null, players = [], units = [], resources = {wood:0,steel:0,fuel:0,supplies:0,research:0};
+let trainingQueue = [];
+let selectedUnits = [];
+let cameraX = 0, cameraY = 0, zoom = 1;
+let dragStart = null, isDragging = false;
+let selectionBox = null;
+let playerColours = {};
+
+// ─── DOM ────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const lobby=$('lobby'), waitingRoom=$('waitingRoom'), gameScreen=$('gameScreen');
+const canvas=$('gameCanvas'), ctx=canvas.getContext('2d');
+const mmCanvas=$('minimapCanvas'), mmCtx=mmCanvas.getContext('2d');
+
+// ─── CONNECT ────────────────────────────────────────
+socket = io();
+myId = null;
+socket.on('connect', ()=>{ myId = socket.id; });
+
+// ─── LOBBY EVENTS ───────────────────────────────────
+$('createBtn').onclick = ()=>{
+  const name = $('nameInput').value.trim() || 'Commander';
+  socket.emit('createRoom',{name});
+};
+$('joinBtn').onclick = ()=>{
+  const name = $('nameInput').value.trim() || 'Commander';
+  const code = $('codeInput').value.trim().toUpperCase();
+  if(code.length!==6) return showError('Enter a 6-character code');
+  socket.emit('joinRoom',{name,code});
+};
+$('startBtn').onclick = ()=>socket.emit('startGame');
+$('nameInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('createBtn').click(); });
+$('codeInput').addEventListener('keydown',e=>{ if(e.key==='Enter') $('joinBtn').click(); });
+
+function showError(msg){ $('errorMsg').textContent=msg; setTimeout(()=>$('errorMsg').textContent='',3000); }
+
+// ─── SOCKET HANDLERS ───────────────────────────────
+socket.on('error',d=>showError(d.msg));
+
+socket.on('roomCreated',d=>{
+  roomCode=d.code; isHost=true;
+  lobby.classList.add('hidden');
+  waitingRoom.classList.add('show');
+  $('roomCodeDisplay').textContent=d.code;
+  $('startBtn').style.display='block';
+  $('waitingMsg').textContent='You are the host';
+  updatePlayerList(d.players);
+});
+
+socket.on('roomUpdated',d=>{
+  if(!waitingRoom.classList.contains('show')&&!gameScreen.classList.contains('show')){
+    lobby.classList.add('hidden');
+    waitingRoom.classList.add('show');
+  }
+  updatePlayerList(d.players);
+});
+
+function updatePlayerList(pList){
+  const ul=$('playerList');
+  ul.innerHTML='';
+  pList.forEach((p,i)=>{
+    const li=document.createElement('li');
+    li.innerHTML=`<span class="player-dot" style="background:${p.colour}"></span>${p.name}${i===0?'<span class="host-badge">HOST</span>':''}`;
+    ul.appendChild(li);
+  });
+}
+
+socket.on('gameStarted',d=>{
+  waitingRoom.classList.remove('show');
+  gameScreen.classList.add('show');
+  players=d.players;
+  playerColours={};
+  d.players.forEach(p=>playerColours[p.id]=p.colour);
+  // decode map
+  map=[];
+  for(let r=0;r<MAP_SIZE;r++){
+    map[r]=[];
+    for(let c=0;c<MAP_SIZE;c++){
+      const t=d.map[r][c];
+      map[r][c]={type:t.t===0?'empty':t.t,owner:t.o};
+    }
+  }
+  // center camera on our base
+  const me=players.find(p=>p.id===myId);
+  if(me){
+    const pos=hexToPixel(me.baseRow,me.baseCol);
+    cameraX=pos.x-canvas.width/2;
+    cameraY=pos.y-canvas.height/2;
+    resources=me.resources;
+  }
+  resizeCanvas();
+  buildTrainPanel();
+  requestAnimationFrame(gameLoop);
+  toast('Game started! Capture zones and train units.');
+});
+
+socket.on('gameUpdate',d=>{
+  units=d.units||[];
+  if(d.mapOwnership){
+    for(const ch of d.mapOwnership){
+      if(map&&map[ch.r]) map[ch.r][ch.c].owner=ch.owner;
+    }
+  }
+  updateSelection();
+});
+
+socket.on('resourceUpdate',d=>{
+  resources=d;
+  updateHud();
+  updateTrainButtons();
+});
+
+socket.on('playerUpdate',d=>{
+  if(d.resources) resources=d.resources;
+  if(d.trainingQueue) trainingQueue=d.trainingQueue;
+  updateHud();
+  updateQueuePanel();
+  updateTrainButtons();
+});
+
+socket.on('unitTrained',d=>{
+  toast(`${d.unitType} trained!`);
+});
+
+socket.on('unitSpawned',d=>{
+  // handled by gameUpdate
+});
+
+socket.on('unitsDestroyed',ids=>{
+  selectedUnits=selectedUnits.filter(id=>!ids.includes(id));
+  updateSelection();
+});
+
+socket.on('trainError',d=>toast(d.msg));
+
+// ─── HEX MATH ──────────────────────────────────────
+function hexToPixel(r,c){
+  const x = HEX_W * (c + 0.5*(r&1));
+  const y = HEX_H * 0.75 * r;
+  return {x,y};
+}
+
+function pixelToHex(px,py){
+  const r = Math.round(py / (HEX_H * 0.75));
+  const c = Math.round((px / HEX_W) - 0.5*(r&1));
+  return {r: Math.max(0,Math.min(MAP_SIZE-1,r)), c: Math.max(0,Math.min(MAP_SIZE-1,c))};
+}
+
+// ─── DRAWING ────────────────────────────────────────
+function resizeCanvas(){
+  canvas.width=window.innerWidth;
+  canvas.height=window.innerHeight;
+}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
+
+function drawHex(cx,cy,size,fillColor,strokeColor,owner){
+  ctx.beginPath();
+  for(let i=0;i<6;i++){
+    const angle=Math.PI/180*(60*i-30);
+    const hx=cx+size*Math.cos(angle);
+    const hy=cy+size*Math.sin(angle);
+    if(i===0)ctx.moveTo(hx,hy);else ctx.lineTo(hx,hy);
+  }
+  ctx.closePath();
+  ctx.fillStyle=fillColor;
+  ctx.fill();
+  if(owner&&playerColours[owner]){
+    ctx.fillStyle=playerColours[owner]+'30';
+    ctx.fill();
+  }
+  ctx.strokeStyle=strokeColor||'#ffffff08';
+  ctx.lineWidth=.5;
+  ctx.stroke();
+}
+
+function draw(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle=TILE_COLOURS[0];
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  if(!map)return;
+
+  ctx.save();
+  ctx.translate(-cameraX*zoom,-cameraY*zoom);
+  ctx.scale(zoom,zoom);
+
+  // visible range
+  const minR=Math.max(0,Math.floor((cameraY)/(HEX_H*0.75))-1);
+  const maxR=Math.min(MAP_SIZE-1,Math.ceil((cameraY+canvas.height/zoom)/(HEX_H*0.75))+1);
+  const minC=Math.max(0,Math.floor((cameraX)/HEX_W)-1);
+  const maxC=Math.min(MAP_SIZE-1,Math.ceil((cameraX+canvas.width/zoom)/HEX_W)+1);
+
+  // draw tiles
+  for(let r=minR;r<=maxR;r++){
+    for(let c=minC;c<=maxC;c++){
+      const pos=hexToPixel(r,c);
+      const tile=map[r][c];
+      const color=TILE_COLOURS[tile.type]||TILE_COLOURS[0];
+      drawHex(pos.x,pos.y,HEX_SIZE,color,null,tile.owner);
+      // zone indicator
+      if(tile.type!=='empty'&&tile.type!==0){
+        ctx.fillStyle='#ffffff18';
+        ctx.font='10px Inter';
+        ctx.textAlign='center';
+        ctx.textBaseline='middle';
+        const icons={forest:'🌲',factory:'🏭',oil:'🛢️',port:'⚓',lab:'🔬'};
+        ctx.font='12px serif';
+        ctx.fillText(icons[tile.type]||'',pos.x,pos.y);
+      }
+    }
+  }
+
+  // draw units
+  for(const u of units){
+    const pos=hexToPixel(u.row,u.col);
+    const col=playerColours[u.owner]||'#fff';
+    const isSelected=selectedUnits.includes(u.id);
+
+    // glow
+    if(isSelected){
+      ctx.beginPath();ctx.arc(pos.x,pos.y,HEX_SIZE*.6,0,Math.PI*2);
+      ctx.fillStyle=col+'40';ctx.fill();
+      ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+    }
+
+    // unit circle
+    ctx.beginPath();ctx.arc(pos.x,pos.y,HEX_SIZE*.35,0,Math.PI*2);
+    ctx.fillStyle=col;ctx.fill();
+
+    // icon
+    ctx.font='12px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(UNIT_ICONS[u.type]||'?',pos.x,pos.y);
+
+    // hp bar
+    const def=UNIT_TYPES[u.type];
+    if(def){
+      const maxHp={SCOUT:40,ARCHER:60,INFANTRY:100,TANK:250,ARTILLERY:80,HELICOPTER:150,MARINE:120,EMP_DRONE:50,DECOY:30};
+      const hp=u.currentHealth/(maxHp[u.type]||100);
+      const bw=HEX_SIZE*.6;
+      ctx.fillStyle='#00000080';
+      ctx.fillRect(pos.x-bw,pos.y-HEX_SIZE*.55,bw*2,3);
+      ctx.fillStyle=hp>.5?'#22c55e':hp>.25?'#f59e0b':'#ef4444';
+      ctx.fillRect(pos.x-bw,pos.y-HEX_SIZE*.55,bw*2*hp,3);
+    }
+
+    // frozen indicator
+    if(u.frozen){
+      ctx.font='8px Inter';ctx.fillStyle='#38bdf8';
+      ctx.fillText('❄',pos.x,pos.y-HEX_SIZE*.45);
+    }
+  }
+
+  // selection box
+  if(selectionBox){
+    ctx.strokeStyle='#38bdf880';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+    const bx=Math.min(selectionBox.x1,selectionBox.x2);
+    const by=Math.min(selectionBox.y1,selectionBox.y2);
+    const bw=Math.abs(selectionBox.x2-selectionBox.x1);
+    const bh=Math.abs(selectionBox.y2-selectionBox.y1);
+    ctx.strokeRect(bx,by,bw,bh);
+    ctx.fillStyle='#38bdf810';ctx.fillRect(bx,by,bw,bh);
+    ctx.setLineDash([]);
+  }
+
+  ctx.restore();
+}
+
+// ─── MINIMAP ────────────────────────────────────────
+function drawMinimap(){
+  if(!map)return;
+  const w=180,h=180;
+  mmCtx.fillStyle='#0a0e17';mmCtx.fillRect(0,0,w,h);
+  const s=w/MAP_SIZE;
+  for(let r=0;r<MAP_SIZE;r++){
+    for(let c=0;c<MAP_SIZE;c++){
+      const tile=map[r][c];
+      let col=tile.owner?playerColours[tile.owner]:'#1a233240';
+      if(!tile.owner&&tile.type!=='empty'&&tile.type!==0){
+        col=TILE_COLOURS[tile.type]+'80';
+      }
+      mmCtx.fillStyle=col;
+      mmCtx.fillRect(c*s,r*s,s+.5,s+.5);
+    }
+  }
+  // units dots
+  for(const u of units){
+    mmCtx.fillStyle=playerColours[u.owner]||'#fff';
+    mmCtx.fillRect(u.col*s,u.row*s,2,2);
+  }
+  // viewport rect
+  const vx=(cameraX/HEX_W)*s;
+  const vy=(cameraY/(HEX_H*0.75))*s;
+  const vw=(canvas.width/zoom/HEX_W)*s;
+  const vh=(canvas.height/zoom/(HEX_H*0.75))*s;
+  mmCtx.strokeStyle='#38bdf8';mmCtx.lineWidth=1;
+  mmCtx.strokeRect(vx,vy,vw,vh);
+}
+
+// ─── INPUT ──────────────────────────────────────────
+let mouseDown=false, rightDown=false, panStart=null, lastMouse={x:0,y:0};
+
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===2){rightDown=true;panStart={x:e.clientX+cameraX,y:e.clientY+cameraY};return;}
+  mouseDown=true;
+  const wx=(e.clientX)/zoom+cameraX;
+  const wy=(e.clientY)/zoom+cameraY;
+  selectionBox={x1:wx,y1:wy,x2:wx,y2:wy};
+});
+
+canvas.addEventListener('mousemove',e=>{
+  lastMouse={x:e.clientX,y:e.clientY};
+  if(rightDown&&panStart){
+    cameraX=panStart.x-e.clientX;
+    cameraY=panStart.y-e.clientY;
+    return;
+  }
+  if(mouseDown&&selectionBox){
+    selectionBox.x2=(e.clientX)/zoom+cameraX;
+    selectionBox.y2=(e.clientY)/zoom+cameraY;
+  }
+});
+
+canvas.addEventListener('mouseup',e=>{
+  if(e.button===2){rightDown=false;panStart=null;return;}
+  mouseDown=false;
+  if(selectionBox){
+    const bx1=Math.min(selectionBox.x1,selectionBox.x2);
+    const by1=Math.min(selectionBox.y1,selectionBox.y2);
+    const bx2=Math.max(selectionBox.x1,selectionBox.x2);
+    const by2=Math.max(selectionBox.y1,selectionBox.y2);
+    const boxW=bx2-bx1, boxH=by2-by1;
+
+    if(boxW<5&&boxH<5){
+      // click
+      const wx=(e.clientX)/zoom+cameraX;
+      const wy=(e.clientY)/zoom+cameraY;
+      const hex=pixelToHex(wx,wy);
+      // check if clicked on own unit
+      const clickedUnit=units.find(u=>u.owner===myId&&u.row===hex.r&&u.col===hex.c);
+      if(clickedUnit){
+        if(e.shiftKey){
+          if(!selectedUnits.includes(clickedUnit.id))selectedUnits.push(clickedUnit.id);
+        } else {
+          selectedUnits=[clickedUnit.id];
+        }
+      } else if(selectedUnits.length>0){
+        // move command
+        socket.emit('moveUnits',{unitIds:selectedUnits,row:hex.r,col:hex.c});
+      } else {
+        selectedUnits=[];
+      }
+    } else {
+      // box select
+      if(!e.shiftKey) selectedUnits=[];
+      for(const u of units){
+        if(u.owner!==myId)continue;
+        const pos=hexToPixel(u.row,u.col);
+        if(pos.x>=bx1&&pos.x<=bx2&&pos.y>=by1&&pos.y<=by2){
+          if(!selectedUnits.includes(u.id)) selectedUnits.push(u.id);
+        }
+      }
+    }
+    selectionBox=null;
+    updateSelection();
+  }
+});
+
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+canvas.addEventListener('wheel',e=>{
+  const oldZoom=zoom;
+  zoom=Math.max(0.3,Math.min(3,zoom-e.deltaY*0.001));
+  // zoom towards cursor
+  const wx=e.clientX/oldZoom+cameraX;
+  const wy=e.clientY/oldZoom+cameraY;
+  cameraX=wx-e.clientX/zoom;
+  cameraY=wy-e.clientY/zoom;
+  e.preventDefault();
+},{passive:false});
+
+// minimap click
+$('minimap').addEventListener('click',e=>{
+  const rect=$('minimapCanvas').getBoundingClientRect();
+  const mx=e.clientX-rect.left;
+  const my=e.clientY-rect.top;
+  const s=180/MAP_SIZE;
+  const r=my/s, c=mx/s;
+  const pos=hexToPixel(r,c);
+  cameraX=pos.x-canvas.width/2/zoom;
+  cameraY=pos.y-canvas.height/2/zoom;
+});
+
+// keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(!gameScreen.classList.contains('show'))return;
+  if(e.key==='Escape'){selectedUnits=[];updateSelection();}
+  // ctrl+a select all own units
+  if(e.key==='a'&&e.ctrlKey){e.preventDefault();selectedUnits=units.filter(u=>u.owner===myId).map(u=>u.id);updateSelection();}
+});
+
+// ─── HUD UPDATES ────────────────────────────────────
+function updateHud(){
+  $('resWood').textContent=resources.wood||0;
+  $('resSteel').textContent=resources.steel||0;
+  $('resFuel').textContent=resources.fuel||0;
+  $('resSupplies').textContent=resources.supplies||0;
+  $('resResearch').textContent=resources.research||0;
+}
+
+// ─── TRAINING PANEL ─────────────────────────────────
+function buildTrainPanel(){
+  const panel=$('bottomPanel');
+  panel.innerHTML='';
+  for(const [type,def] of Object.entries(UNIT_TYPES)){
+    const btn=document.createElement('div');
+    btn.className='train-btn';
+    btn.dataset.type=type;
+    const costStr=Object.entries(def.cost).map(([k,v])=>`${v}${k[0].toUpperCase()}`).join(' ');
+    btn.innerHTML=`<span class="train-icon">${UNIT_ICONS[type]}</span><span class="train-name">${type}</span><span class="train-cost">${costStr}</span>`;
+    btn.onclick=()=>socket.emit('trainUnit',{unitType:type});
+    panel.appendChild(btn);
+  }
+  updateTrainButtons();
+}
+
+function updateTrainButtons(){
+  document.querySelectorAll('.train-btn').forEach(btn=>{
+    const type=btn.dataset.type;
+    const def=UNIT_TYPES[type];
+    if(!def)return;
+    let canAfford=true;
+    for(const [res,amt] of Object.entries(def.cost)){
+      if((resources[res]||0)<amt){canAfford=false;break;}
+    }
+    btn.classList.toggle('disabled',!canAfford);
+  });
+}
+
+// ─── QUEUE PANEL ────────────────────────────────────
+function updateQueuePanel(){
+  const panel=$('queuePanel');
+  const content=$('queueContent');
+  if(trainingQueue.length===0){panel.classList.add('hidden');return;}
+  panel.classList.remove('hidden');
+  content.innerHTML='';
+  const now=Date.now();
+  for(const item of trainingQueue){
+    const elapsed=now-item.startTime;
+    const pct=Math.min(100,elapsed/item.duration*100);
+    const div=document.createElement('div');
+    div.className='queue-item';
+    div.innerHTML=`<span>${UNIT_ICONS[item.unitType]||'?'} ${item.unitType}</span><div class="queue-bar"><div class="queue-bar-fill" style="width:${pct}%"></div></div>`;
+    content.appendChild(div);
+  }
+}
+
+// ─── SELECTION INFO ─────────────────────────────────
+function updateSelection(){
+  const panel=$('selectionInfo');
+  const content=$('selContent');
+  if(selectedUnits.length===0){panel.classList.add('hidden');return;}
+  panel.classList.remove('hidden');
+  const maxHp={SCOUT:40,ARCHER:60,INFANTRY:100,TANK:250,ARTILLERY:80,HELICOPTER:150,MARINE:120,EMP_DRONE:50,DECOY:30};
+  if(selectedUnits.length===1){
+    const u=units.find(u=>u.id===selectedUnits[0]);
+    if(!u){panel.classList.add('hidden');return;}
+    const hp=u.currentHealth/(maxHp[u.type]||100)*100;
+    content.innerHTML=`
+      <div class="sel-stat" style="color:var(--text);font-weight:600">${UNIT_ICONS[u.type]} ${u.type}</div>
+      <div class="sel-stat">HP: ${u.currentHealth}/${maxHp[u.type]||'?'}</div>
+      <div class="sel-hp-bar"><div class="sel-hp-fill" style="width:${hp}%;background:${hp>50?'var(--green)':hp>25?'var(--gold)':'var(--red)'}"></div></div>
+      <div class="sel-stat" style="margin-top:.3rem">Pos: (${u.row}, ${u.col})</div>
+      ${u.frozen?'<div class="sel-stat" style="color:var(--accent)">❄ FROZEN</div>':''}
+    `;
+  } else {
+    const counts={};
+    for(const id of selectedUnits){
+      const u=units.find(u=>u.id===id);
+      if(u) counts[u.type]=(counts[u.type]||0)+1;
+    }
+    content.innerHTML=`<div class="sel-stat" style="color:var(--text);font-weight:600">${selectedUnits.length} units selected</div>`+
+      Object.entries(counts).map(([t,n])=>`<div class="sel-stat">${UNIT_ICONS[t]} ${t} ×${n}</div>`).join('');
+  }
+}
+
+// ─── TOAST ──────────────────────────────────────────
+function toast(msg){
+  const div=document.createElement('div');
+  div.className='toast';
+  div.textContent=msg;
+  $('toasts').appendChild(div);
+  setTimeout(()=>div.remove(),3000);
+}
+
+// ─── GAME LOOP ──────────────────────────────────────
+function gameLoop(){
+  draw();
+  drawMinimap();
+  updateQueuePanel();
+  requestAnimationFrame(gameLoop);
+}
+
+})();
+</script>
+</body>
+</html>
