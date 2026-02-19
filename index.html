@@ -1,1332 +1,351 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="FRONTLINE — Multiplayer Real-Time Strategy Game">
-  <title>FRONTLINE — RTS</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet">
-  <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
-    :root {
-      --bg: #0a0e17;
-      --surface: #111827;
-      --surface2: #1e293b;
-      --accent: #38bdf8;
-      --accent2: #818cf8;
-      --green: #22c55e;
-      --red: #ef4444;
-      --gold: #fbbf24;
-      --text: #e2e8f0;
-      --dim: #64748b;
-      --glass: rgba(17, 24, 39, .72);
-      --border: rgba(56, 189, 248, .15);
-      --gradient: linear-gradient(135deg, #38bdf8, #818cf8);
-    }
-
-    html,
-    body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      overflow: hidden
-    }
-
-    /* ─── LOBBY ───────────────────────────────────────── */
-    #lobby {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      position: relative;
-      z-index: 10
-    }
-
-    #lobby.hidden {
-      display: none
-    }
-
-    .lobby-bg {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(135deg, #0a0e17 0%, #1a1040 40%, #0a0e17 100%);
-      z-index: -1
-    }
-
-    .lobby-bg::after {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(ellipse at 50% 30%, rgba(56, 189, 248, .08), transparent 60%)
-    }
-
-    .logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 4rem;
-      font-weight: 900;
-      letter-spacing: .15em;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 60px rgba(56, 189, 248, .3);
-      margin-bottom: .25rem;
-      animation: glowPulse 3s ease-in-out infinite alternate
-    }
-
-    .logo-sub {
-      font-size: .9rem;
-      color: var(--dim);
-      letter-spacing: .6em;
-      text-transform: uppercase;
-      margin-bottom: 3rem
-    }
-
-    @keyframes glowPulse {
-      0% {
-        filter: drop-shadow(0 0 8px rgba(56, 189, 248, .3))
-      }
-
-      100% {
-        filter: drop-shadow(0 0 24px rgba(129, 140, 248, .6))
-      }
-    }
-
-    .lobby-card {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 2.5rem;
-      width: min(420px, 90vw);
-      backdrop-filter: blur(24px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .4)
-    }
-
-    .lobby-card h2 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.1rem;
-      letter-spacing: .12em;
-      margin-bottom: 1.5rem;
-      color: var(--accent)
-    }
-
-    .field {
-      margin-bottom: 1.2rem
-    }
-
-    .field label {
-      display: block;
-      font-size: .75rem;
-      color: var(--dim);
-      text-transform: uppercase;
-      letter-spacing: .1em;
-      margin-bottom: .4rem
-    }
-
-    .field input {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: .5rem;
-      padding: .7rem 1rem;
-      color: var(--text);
-      font-size: 1rem;
-      font-family: 'Inter', sans-serif;
-      outline: none;
-      transition: border .2s
-    }
-
-    .field input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(56, 189, 248, .12)
-    }
-
-    .btn {
-      width: 100%;
-      padding: .8rem;
-      border: none;
-      border-radius: .5rem;
-      cursor: pointer;
-      font-family: 'Orbitron', sans-serif;
-      font-size: .85rem;
-      letter-spacing: .12em;
-      transition: all .2s;
-      position: relative;
-      overflow: hidden
-    }
-
-    .btn-primary {
-      background: var(--gradient);
-      color: #0a0e17;
-      font-weight: 700
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 20px rgba(56, 189, 248, .35)
-    }
-
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: var(--accent);
-      margin-top: .6rem
-    }
-
-    .btn-secondary:hover {
-      background: rgba(56, 189, 248, .08);
-      border-color: var(--accent)
-    }
-
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: .8rem;
-      margin: 1.5rem 0;
-      color: var(--dim);
-      font-size: .75rem
-    }
-
-    .divider::before,
-    .divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border)
-    }
-
-    .error-msg {
-      color: var(--red);
-      font-size: .8rem;
-      margin-top: .5rem;
-      min-height: 1.2rem
-    }
-
-    /* ─── WAITING ROOM ────────────────────────────────── */
-    #waitingRoom {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      position: relative;
-      z-index: 10
-    }
-
-    #waitingRoom.show {
-      display: flex
-    }
-
-    .room-code-display {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 2.5rem;
-      letter-spacing: .3em;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin: .5rem 0
-    }
-
-    .player-list {
-      list-style: none;
-      padding: 0;
-      margin: 1.5rem 0;
-      width: 100%
-    }
-
-    .player-list li {
-      display: flex;
-      align-items: center;
-      gap: .8rem;
-      padding: .6rem 1rem;
-      border-radius: .5rem;
-      margin-bottom: .4rem;
-      background: rgba(255, 255, 255, .03);
-      border: 1px solid rgba(255, 255, 255, .05);
-      font-size: .9rem
-    }
-
-    .player-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      flex-shrink: 0
-    }
-
-    .host-badge {
-      font-size: .65rem;
-      background: var(--gold);
-      color: #000;
-      padding: 2px 8px;
-      border-radius: 10rem;
-      font-weight: 600;
-      margin-left: auto
-    }
-
-    /* ─── GAME SCREEN ─────────────────────────────────── */
-    #gameScreen {
-      display: none;
-      position: relative;
-      width: 100%;
-      height: 100%
-    }
-
-    #gameScreen.show {
-      display: block
-    }
-
-    #gameCanvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      cursor: crosshair
-    }
-
-    /* ─── HUD ─────────────────────────────────────────── */
-    #hud {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      display: flex;
-      align-items: center;
-      padding: .6rem 1.2rem;
-      background: linear-gradient(180deg, rgba(10, 14, 23, .92), rgba(10, 14, 23, .6));
-      border-bottom: 1px solid var(--border);
-      gap: 1.5rem;
-      pointer-events: auto;
-      z-index: 20
-    }
-
-    .hud-logo {
-      font-family: 'Orbitron', sans-serif;
-      font-size: .9rem;
-      font-weight: 700;
-      background: var(--gradient);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent
-    }
-
-    .res-group {
-      display: flex;
-      gap: 1.2rem;
-      flex: 1;
-      justify-content: center
-    }
-
-    .res-item {
-      display: flex;
-      align-items: center;
-      gap: .35rem;
-      font-size: .8rem;
-      font-weight: 500
-    }
-
-    .res-icon {
-      width: 18px;
-      height: 18px;
-      border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: .65rem
-    }
-
-    .res-wood {
-      background: #65a30d
-    }
-
-    .res-steel {
-      background: #64748b
-    }
-
-    .res-fuel {
-      background: #f59e0b
-    }
-
-    .res-supplies {
-      background: #06b6d4
-    }
-
-    .res-research {
-      background: #a855f7
-    }
-
-    /* ─── BOTTOM PANEL ────────────────────────────────── */
-    #bottomPanel {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-bottom: none;
-      border-radius: 1rem 1rem 0 0;
-      backdrop-filter: blur(20px);
-      padding: 1rem 1.5rem;
-      display: flex;
-      gap: 1.2rem;
-      z-index: 20;
-      pointer-events: auto;
-      max-width: 95vw;
-      overflow-x: auto
-    }
-
-    .train-btn {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: .3rem;
-      padding: .5rem .7rem;
-      border-radius: .6rem;
-      border: 1px solid var(--border);
-      background: rgba(255, 255, 255, .03);
-      cursor: pointer;
-      transition: all .15s;
-      min-width: 68px
-    }
-
-    .train-btn:hover {
-      border-color: var(--accent);
-      background: rgba(56, 189, 248, .08);
-      transform: translateY(-2px)
-    }
-
-    .train-btn.disabled {
-      opacity: .35;
-      cursor: not-allowed;
-      transform: none
-    }
-
-    .train-icon {
-      font-size: 1.4rem
-    }
-
-    .train-name {
-      font-size: .55rem;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      color: var(--dim);
-      font-weight: 600
-    }
-
-    .train-cost {
-      font-size: .5rem;
-      color: var(--dim)
-    }
-
-    /* ─── QUEUE DISPLAY ───────────────────────────────── */
-    #queuePanel {
-      position: absolute;
-      bottom: 90px;
-      right: 12px;
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .8rem;
-      backdrop-filter: blur(20px);
-      padding: .8rem 1rem;
-      z-index: 20;
-      pointer-events: auto;
-      min-width: 160px
-    }
-
-    #queuePanel.hidden {
-      display: none
-    }
-
-    #queuePanel h3 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: .65rem;
-      letter-spacing: .1em;
-      color: var(--accent);
-      margin-bottom: .5rem
-    }
-
-    .queue-item {
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-      font-size: .75rem;
-      padding: .25rem 0
-    }
-
-    .queue-bar {
-      flex: 1;
-      height: 4px;
-      background: var(--surface);
-      border-radius: 2px;
-      overflow: hidden
-    }
-
-    .queue-bar-fill {
-      height: 100%;
-      background: var(--gradient);
-      border-radius: 2px;
-      transition: width .3s
-    }
-
-    /* ─── SELECTION INFO ──────────────────────────────── */
-    #selectionInfo {
-      position: absolute;
-      bottom: 90px;
-      left: 12px;
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .8rem;
-      backdrop-filter: blur(20px);
-      padding: .8rem 1rem;
-      z-index: 20;
-      pointer-events: auto;
-      min-width: 180px
-    }
-
-    #selectionInfo.hidden {
-      display: none
-    }
-
-    #selectionInfo h3 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: .65rem;
-      letter-spacing: .1em;
-      color: var(--accent);
-      margin-bottom: .5rem
-    }
-
-    .sel-stat {
-      font-size: .75rem;
-      color: var(--dim);
-      margin-bottom: .2rem
-    }
-
-    .sel-hp-bar {
-      width: 100%;
-      height: 5px;
-      background: var(--surface);
-      border-radius: 3px;
-      margin-top: .3rem;
-      overflow: hidden
-    }
-
-    .sel-hp-fill {
-      height: 100%;
-      background: var(--green);
-      border-radius: 3px;
-      transition: width .3s
-    }
-
-    /* ─── BONUSES PANEL ───────────────────────────────── */
-    #bonusPanel {
-      position: absolute;
-      top: 52px;
-      left: 12px;
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .6rem;
-      backdrop-filter: blur(20px);
-      padding: .6rem .8rem;
-      z-index: 20;
-      pointer-events: auto;
-      min-width: 160px
-    }
-
-    #bonusPanel.hidden {
-      display: none
-    }
-
-    #bonusPanel h3 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: .6rem;
-      letter-spacing: .1em;
-      color: var(--gold);
-      margin-bottom: .4rem
-    }
-
-    .bonus-item {
-      font-size: .7rem;
-      color: var(--accent);
-      padding: .15rem 0;
-      display: flex;
-      align-items: center;
-      gap: .4rem
-    }
-
-    .bonus-dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--gold);
-      animation: bonusPulse 2s ease-in-out infinite
-    }
-
-    @keyframes bonusPulse {
-
-      0%,
-      100% {
-        opacity: .5
-      }
-
-      50% {
-        opacity: 1
-      }
-    }
-
-    /* ─── MINIMAP ─────────────────────────────────────── */
-    #minimap {
-      position: absolute;
-      top: 52px;
-      right: 12px;
-      width: 180px;
-      height: 180px;
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .6rem;
-      overflow: hidden;
-      z-index: 20;
-      pointer-events: auto;
-      cursor: pointer
-    }
-
-    #minimapCanvas {
-      width: 100%;
-      height: 100%;
-      image-rendering: pixelated
-    }
-
-    /* ─── TOAST ───────────────────────────────────────── */
-    #toasts {
-      position: absolute;
-      top: 60px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 50;
-      display: flex;
-      flex-direction: column;
-      gap: .4rem;
-      align-items: center;
-      pointer-events: none
-    }
-
-    .toast {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .5rem;
-      padding: .5rem 1.2rem;
-      font-size: .8rem;
-      backdrop-filter: blur(12px);
-      animation: toastIn .3s ease, toastOut .3s ease 2.7s forwards;
-      pointer-events: none
-    }
-
-    .toast.combat {
-      border-color: var(--red)
-    }
-
-    .toast.bonus {
-      border-color: var(--gold)
-    }
-
-    .toast.victory {
-      border-color: var(--green);
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1rem;
-      padding: .8rem 2rem
-    }
-
-    @keyframes toastIn {
-      from {
-        opacity: 0;
-        transform: translateY(-10px)
-      }
-
-      to {
-        opacity: 1;
-        transform: translateY(0)
-      }
-    }
-
-    @keyframes toastOut {
-      from {
-        opacity: 1
-      }
-
-      to {
-        opacity: 0;
-        transform: translateY(-10px)
-      }
-    }
-
-    /* ─── COMBAT FLASH ────────────────────────────────── */
-    .combat-flash {
-      position: absolute;
-      pointer-events: none;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(239, 68, 68, .6), transparent);
-      animation: flashAnim .4s ease-out forwards;
-      z-index: 15
-    }
-
-    @keyframes flashAnim {
-      0% {
-        transform: scale(0);
-        opacity: 1
-      }
-
-      100% {
-        transform: scale(2);
-        opacity: 0
-      }
-    }
-
-    /* ─── GAME OVER OVERLAY ──────────────────────────── */
-    #gameOverlay {
-      display: none;
-      position: absolute;
-      inset: 0;
-      background: rgba(10, 14, 23, .85);
-      backdrop-filter: blur(8px);
-      z-index: 100;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center
-    }
-
-    #gameOverlay.show {
-      display: flex
-    }
-
-    .go-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 3rem;
-      font-weight: 900;
-      margin-bottom: .5rem
-    }
-
-    .go-winner {
-      font-size: 1.3rem;
-      margin-bottom: 2rem;
-      color: var(--dim)
-    }
-
-    .go-stats {
-      background: var(--glass);
-      border: 1px solid var(--border);
-      border-radius: .8rem;
-      padding: 1.5rem;
-      min-width: 360px;
-      max-width: 90vw
-    }
-
-    .go-stats table {
-      width: 100%;
-      border-collapse: collapse
-    }
-
-    .go-stats th {
-      font-family: 'Orbitron', sans-serif;
-      font-size: .6rem;
-      letter-spacing: .1em;
-      color: var(--dim);
-      text-align: left;
-      padding: .4rem .6rem;
-      border-bottom: 1px solid var(--border)
-    }
-
-    .go-stats td {
-      font-size: .8rem;
-      padding: .4rem .6rem;
-      border-bottom: 1px solid rgba(255, 255, 255, .03)
-    }
-
-    .go-stats tr.winner td {
-      color: var(--gold)
-    }
-
-    /* scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--dim);
-      border-radius: 3px
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="description" content="FRONTLINE — Multiplayer Real-Time Strategy">
+<title>FRONTLINE</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0d0d14;--panel:rgba(13,13,20,.88);--border:rgba(56,189,248,.15);--accent:#38bdf8;--accent2:#818cf8;--text:#e2e8f0;--dim:#64748b;--green:#22c55e;--red:#ef4444;--gold:#fbbf24}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;overflow:hidden;touch-action:none;user-select:none}
+canvas#gameCanvas{position:fixed;inset:0;display:block}
+#lobbyScreen{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d0d14,#1a1040,#0d0d14)}
+#lobbyScreen::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(56,189,248,.07),transparent 60%);pointer-events:none}
+#lobbyScreen.hidden{display:none}
+.logo{font-family:'Orbitron';font-size:clamp(2rem,8vw,4.5rem);font-weight:900;letter-spacing:.15em;background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gp 3s ease-in-out infinite alternate;position:relative;z-index:1}
+.logo-sub{font-size:clamp(.7rem,2vw,.95rem);color:var(--dim);letter-spacing:.6em;text-transform:uppercase;margin-bottom:2rem;position:relative;z-index:1}
+@keyframes gp{0%{filter:drop-shadow(0 0 8px rgba(56,189,248,.3))}100%{filter:drop-shadow(0 0 28px rgba(129,140,248,.6))}}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:1rem;padding:2rem;width:min(400px,92vw);backdrop-filter:blur(20px);position:relative;z-index:1}
+.card h2{font-family:'Orbitron';font-size:1rem;letter-spacing:.12em;color:var(--accent);margin-bottom:1.2rem}
+.field{margin-bottom:1rem}.field label{display:block;font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;margin-bottom:.3rem}
+.field input{width:100%;background:#111827;border:1px solid var(--border);border-radius:.5rem;padding:.6rem .8rem;color:var(--text);font-size:.95rem;font-family:'Rajdhani';outline:none}
+.field input:focus{border-color:var(--accent)}
+.colours{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap}
+.cswatch{width:32px;height:32px;border-radius:50%;border:3px solid transparent;cursor:pointer;transition:transform .15s}
+.cswatch.active{border-color:#fff;transform:scale(1.2)}
+.btn{width:100%;padding:.7rem;border:none;border-radius:.5rem;cursor:pointer;font-family:'Orbitron';font-size:.8rem;letter-spacing:.1em;transition:all .2s}
+.btn-p{background:linear-gradient(135deg,#38bdf8,#818cf8);color:#0d0d14;font-weight:700}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 4px 20px rgba(56,189,248,.35)}
+.btn-s{background:transparent;border:1px solid var(--border);color:var(--accent);margin-top:.5rem}
+.divider{display:flex;align-items:center;gap:.6rem;margin:1.2rem 0;color:var(--dim);font-size:.7rem}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.error-msg{color:var(--red);font-size:.75rem;margin-top:.4rem;min-height:1rem}
+.room-code{font-family:'Orbitron';font-size:2.2rem;letter-spacing:.3em;background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin:.4rem 0}
+.plist{list-style:none;margin:1rem 0}
+.plist li{display:flex;align-items:center;gap:.6rem;padding:.45rem .8rem;border-radius:.4rem;margin-bottom:.3rem;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.04);font-size:.85rem}
+.pdot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.host-b{font-size:.6rem;background:var(--gold);color:#000;padding:1px 6px;border-radius:10rem;font-weight:700;margin-left:auto}
+#countdownOverlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(13,13,20,.85)}
+#countdownOverlay.show{display:flex}
+#countdownNum{font-family:'Orbitron';font-size:8rem;font-weight:900;background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:cdP .8s ease-in-out infinite}
+@keyframes cdP{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+#topBar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--panel);border-bottom:1px solid var(--border);display:none;align-items:center;padding:0 1rem;gap:1rem;z-index:50;backdrop-filter:blur(12px)}
+#topBar.show{display:flex}
+.tb-name{display:flex;align-items:center;gap:.4rem;font-weight:600;font-size:.85rem}
+.tb-dot{width:10px;height:10px;border-radius:50%}
+.res-g{display:flex;gap:1rem;flex:1;justify-content:center;flex-wrap:wrap}
+.res-i{display:flex;align-items:center;gap:.25rem;font-size:.8rem;font-weight:500}
+.res-n{font-variant-numeric:tabular-nums;transition:color .3s}.res-n.up{color:var(--green)}
+.tb-land{font-size:.7rem;color:var(--dim);white-space:nowrap}
+#trainPanel{position:fixed;top:44px;right:0;bottom:0;width:220px;background:var(--panel);border-left:1px solid var(--border);backdrop-filter:blur(12px);display:none;flex-direction:column;z-index:40;overflow-y:auto}
+#trainPanel.show{display:flex}
+.tp-head{font-family:'Orbitron';font-size:.65rem;letter-spacing:.1em;color:var(--accent);padding:.8rem .8rem .4rem}
+.tp-queue{padding:0 .8rem .4rem;border-bottom:1px solid var(--border)}
+.tq-item{display:flex;align-items:center;gap:.4rem;font-size:.7rem;padding:.2rem 0}
+.tq-bar{flex:1;height:3px;background:#1e293b;border-radius:2px;overflow:hidden}
+.tq-fill{height:100%;background:linear-gradient(90deg,#38bdf8,#818cf8);border-radius:2px}
+.tp-units{flex:1;overflow-y:auto;padding:.4rem}
+.tu-card{border:1px solid var(--border);border-radius:.5rem;padding:.5rem;margin-bottom:.4rem;background:rgba(255,255,255,.02)}
+.tu-top{display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem}
+.tu-name{font-family:'Orbitron';font-size:.55rem;letter-spacing:.06em;font-weight:600}
+.tu-cost{font-size:.6rem;color:var(--dim)}
+.tu-btn{width:100%;padding:.3rem;border:none;border-radius:.3rem;background:linear-gradient(135deg,#38bdf8,#818cf8);color:#0d0d14;font-family:'Orbitron';font-size:.55rem;letter-spacing:.08em;font-weight:700;cursor:pointer;margin-top:.3rem}
+.tu-btn:disabled{opacity:.3;cursor:not-allowed}
+#mTrainBtn{position:fixed;bottom:16px;right:16px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#38bdf8,#818cf8);border:none;color:#0d0d14;font-size:1.4rem;cursor:pointer;z-index:55;display:none;box-shadow:0 4px 16px rgba(56,189,248,.3)}
+#minimap{position:fixed;bottom:12px;left:12px;width:180px;height:140px;background:var(--panel);border:1px solid var(--border);border-radius:.5rem;overflow:hidden;z-index:40;display:none;cursor:pointer}
+#minimap.show{display:block}
+#mmCanvas{width:100%;height:100%;image-rendering:pixelated}
+#bonuses{position:fixed;bottom:12px;right:12px;z-index:40;display:none;gap:.4rem;flex-direction:column;align-items:flex-end}
+#bonuses.show{display:flex}
+.bonus-i{background:var(--panel);border:1px solid var(--gold);border-radius:.5rem;padding:.3rem .6rem;font-size:.65rem;color:var(--gold);display:flex;align-items:center;gap:.3rem;cursor:default;position:relative}
+.bonus-i::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--gold);animation:bp 2s ease-in-out infinite}
+@keyframes bp{0%,100%{opacity:.4}50%{opacity:1}}
+.bonus-tip{display:none;position:absolute;right:110%;top:50%;transform:translateY(-50%);background:#111827;border:1px solid var(--border);border-radius:.3rem;padding:.2rem .5rem;font-size:.6rem;color:var(--text);white-space:nowrap}
+.bonus-i:hover .bonus-tip{display:block}
+#toasts{position:fixed;top:52px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:.3rem;align-items:center;pointer-events:none}
+.toast{background:var(--panel);border:1px solid var(--border);border-radius:.4rem;padding:.4rem 1rem;font-size:.8rem;backdrop-filter:blur(10px);animation:ti .25s ease,to2 .25s ease 2.75s forwards}
+@keyframes ti{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes to2{to{opacity:0;transform:translateY(-8px)}}
+#goScreen{position:fixed;inset:0;z-index:150;background:rgba(13,13,20,.9);backdrop-filter:blur(8px);display:none;flex-direction:column;align-items:center;justify-content:center}
+#goScreen.show{display:flex}
+.go-t{font-family:'Orbitron';font-size:clamp(2rem,6vw,3.5rem);font-weight:900;margin-bottom:.4rem}
+.go-r{font-size:1.1rem;color:var(--dim);margin-bottom:1.5rem}
+.go-stats{background:var(--panel);border:1px solid var(--border);border-radius:.8rem;padding:1.2rem;min-width:320px;max-width:92vw;margin-bottom:1.5rem}
+.go-stats table{width:100%;border-collapse:collapse}
+.go-stats th{font-family:'Orbitron';font-size:.55rem;letter-spacing:.08em;color:var(--dim);text-align:left;padding:.3rem .5rem;border-bottom:1px solid var(--border)}
+.go-stats td{font-size:.8rem;padding:.3rem .5rem;border-bottom:1px solid rgba(255,255,255,.03)}
+.go-stats tr.w td{color:var(--gold)}
+.go-btns{display:flex;gap:.8rem}.go-btns .btn{width:auto;padding:.6rem 1.5rem}
+#helpBtn{position:fixed;top:50px;right:12px;width:32px;height:32px;border-radius:50%;background:var(--panel);border:1px solid var(--border);color:var(--accent);font-family:'Orbitron';font-size:.75rem;cursor:pointer;z-index:50;display:none}
+#helpBtn.show{display:block}
+#helpModal{position:fixed;inset:0;z-index:160;background:rgba(13,13,20,.9);display:none;align-items:center;justify-content:center}
+#helpModal.show{display:flex}
+.help-card{background:#111827;border:1px solid var(--border);border-radius:1rem;padding:2rem;max-width:600px;max-height:80vh;overflow-y:auto;width:92vw}
+.help-card h2{font-family:'Orbitron';font-size:1rem;color:var(--accent);margin-bottom:1rem}
+.help-card h3{font-family:'Orbitron';font-size:.7rem;color:var(--gold);margin:1rem 0 .4rem;letter-spacing:.08em}
+.help-card p,.help-card li{font-size:.8rem;color:var(--dim);line-height:1.5}
+.help-card ul{padding-left:1.2rem;margin-bottom:.5rem}
+.help-close{float:right;background:none;border:none;color:var(--accent);font-size:1.2rem;cursor:pointer}
+#connError{position:fixed;inset:0;z-index:999;background:var(--bg);display:none;align-items:center;justify-content:center;flex-direction:column;gap:1rem}
+#connError.show{display:flex}
+#connError p{font-size:1rem;color:var(--dim);text-align:center;max-width:400px}
+#builtBy{position:fixed;bottom:4px;right:4px;font-size:.5rem;color:rgba(255,255,255,.15);z-index:30;pointer-events:none}
+@media(max-width:768px){#trainPanel{top:auto;bottom:0;left:0;right:0;width:100%;height:50vh;border-left:none;border-top:1px solid var(--border);border-radius:1rem 1rem 0 0}#mTrainBtn{display:block}#bonuses{bottom:74px;right:12px}.res-g{gap:.6rem}.res-i{font-size:.7rem}#minimap{width:120px;height:95px}}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+</style>
 </head>
-
 <body>
-
-  <!-- ── LOBBY ───────────────────────────────────────── -->
-  <div class="lobby-bg"></div>
-  <div id="lobby">
-    <div class="logo">FRONTLINE</div>
-    <div class="logo-sub">Real-Time Strategy</div>
-    <div class="lobby-card">
-      <h2>Deploy</h2>
-      <div class="field"><label>Commander Name</label><input id="nameInput" placeholder="Enter your callsign"
-          maxlength="16" autocomplete="off"></div>
-      <button class="btn btn-primary" id="createBtn">Create Room</button>
-      <div class="divider">OR JOIN</div>
-      <div class="field"><label>Room Code</label><input id="codeInput" placeholder="6-character code" maxlength="6"
-          autocomplete="off" style="text-transform:uppercase"></div>
-      <button class="btn btn-secondary" id="joinBtn">Join Room</button>
-      <div class="error-msg" id="errorMsg"></div>
-    </div>
-  </div>
-
-  <!-- ── WAITING ROOM ───────────────────────────────── -->
-  <div id="waitingRoom">
-    <div class="lobby-card" style="text-align:center">
-      <h2>War Room</h2>
-      <div style="font-size:.75rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Room Code</div>
-      <div class="room-code-display" id="roomCodeDisplay">------</div>
-      <ul class="player-list" id="playerList"></ul>
-      <button class="btn btn-primary" id="startBtn" style="display:none">Launch Game</button>
-      <div style="font-size:.75rem;color:var(--dim);margin-top:.8rem" id="waitingMsg">Waiting for host to start...</div>
-    </div>
-  </div>
-
-  <!-- ── GAME SCREEN ────────────────────────────────── -->
-  <div id="gameScreen">
-    <canvas id="gameCanvas"></canvas>
-
-    <div id="hud">
-      <div class="hud-logo">FRONTLINE</div>
-      <div class="res-group">
-        <div class="res-item">
-          <div class="res-icon res-wood">🪵</div><span id="resWood">0</span>
-        </div>
-        <div class="res-item">
-          <div class="res-icon res-steel">⚙</div><span id="resSteel">0</span>
-        </div>
-        <div class="res-item">
-          <div class="res-icon res-fuel">⛽</div><span id="resFuel">0</span>
-        </div>
-        <div class="res-item">
-          <div class="res-icon res-supplies">📦</div><span id="resSupplies">0</span>
-        </div>
-        <div class="res-item">
-          <div class="res-icon res-research">🔬</div><span id="resResearch">0</span>
-        </div>
-      </div>
-    </div>
-
-    <div id="bonusPanel" class="hidden">
-      <h3>⚡ Active Bonuses</h3>
-      <div id="bonusContent"></div>
-    </div>
-    <div id="minimap"><canvas id="minimapCanvas" width="180" height="180"></canvas></div>
-    <div id="selectionInfo" class="hidden">
-      <h3>Selected</h3>
-      <div id="selContent"></div>
-    </div>
-    <div id="queuePanel" class="hidden">
-      <h3>Training Queue</h3>
-      <div id="queueContent"></div>
-    </div>
-    <div id="bottomPanel"></div>
-    <div id="toasts"></div>
-
-    <!-- Game Over -->
-    <div id="gameOverlay">
-      <div class="go-title" id="goTitle"></div>
-      <div class="go-winner" id="goWinner"></div>
-      <div class="go-stats">
-        <table>
-          <thead>
-            <tr>
-              <th>Player</th>
-              <th>Hexes</th>
-              <th>Kills</th>
-              <th>Lost</th>
-              <th>Resources</th>
-            </tr>
-          </thead>
-          <tbody id="goStatsBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    (() => {
-      'use strict';
-
-      const MAP_SIZE = 80;
-      const HEX_SIZE = 26;
-      const HEX_W = Math.sqrt(3) * HEX_SIZE;
-      const HEX_H = 2 * HEX_SIZE;
-
-      const UNIT_ICONS = { SCOUT: '🏃', ARCHER: '🏹', INFANTRY: '⚔️', TANK: '🛡️', ARTILLERY: '💣', HELICOPTER: '🚁', MARINE: '🚢', EMP_DRONE: '⚡', DECOY: '👻' };
-      const UNIT_MAX_HP = { SCOUT: 40, ARCHER: 60, INFANTRY: 100, TANK: 250, ARTILLERY: 80, HELICOPTER: 150, MARINE: 120, EMP_DRONE: 50, DECOY: 30 };
-      const UNIT_TYPES = {
-        SCOUT: { cost: { wood: 20 }, requiredZone: 'forest' }, ARCHER: { cost: { wood: 30, steel: 10 }, requiredZone: 'forest' },
-        INFANTRY: { cost: { steel: 30 }, requiredZone: 'factory' }, TANK: { cost: { steel: 50, fuel: 20 }, requiredZone: 'factory' },
-        ARTILLERY: { cost: { fuel: 40, steel: 30 }, requiredZone: 'oil' }, HELICOPTER: { cost: { fuel: 60, steel: 20 }, requiredZone: 'oil' },
-        MARINE: { cost: { supplies: 30, steel: 20 }, requiredZone: 'port' }, EMP_DRONE: { cost: { research: 50, fuel: 20 }, requiredZone: 'lab' },
-        DECOY: { cost: { research: 30 }, requiredZone: 'lab' }
-      };
-      const BONUS_NAMES = {
-        ghostScouts: '👻 Ghost Scouts', armouredHelicopters: '🛡️ Armoured Helis',
-        amphibiousArchers: '🌊 Amphibious Archers', tankShield: '⚡ Tank Shield',
-        stealthDrones: '🔇 Stealth Drones', navalArtillery: '💥 Naval Artillery'
-      };
-      const TILE_COLOURS = { 0: '#1a2332', empty: '#1a2332', forest: '#1b3a26', factory: '#3a2e1e', oil: '#2e2215', port: '#152838', lab: '#2a1a3a' };
-      const TILE_ICONS = { forest: '🌲', factory: '🏭', oil: '🛢️', port: '⚓', lab: '🔬' };
-
-      // ─── STATE ──────────────────────────────────────────
-      let socket, myId, isHost = false, roomCode = '';
-      let map = null, players = [], units = [], resources = { wood: 0, steel: 0, fuel: 0, supplies: 0, research: 0 };
-      let trainingQueue = [], activeBonuses = [];
-      let selectedUnits = [];
-      let cameraX = 0, cameraY = 0, zoom = 1;
-      let selectionBox = null;
-      let playerColours = {}, playerNames = {};
-      let combatFlashes = []; // {x, y, time, color}
-      let basePositions = {}; // playerId -> {row, col}
-
-      // Smooth unit interpolation
-      let unitPositions = {}; // unitId -> {x, y, targetX, targetY}
-
-      const $ = id => document.getElementById(id);
-      const lobby = $('lobby'), waitingRoom = $('waitingRoom'), gameScreen = $('gameScreen');
-      const canvas = $('gameCanvas'), ctx = canvas.getContext('2d');
-      const mmCanvas = $('minimapCanvas'), mmCtx = mmCanvas.getContext('2d');
-
-      socket = io();
-      socket.on('connect', () => { myId = socket.id; });
-
-      // ─── LOBBY ──────────────────────────────────────────
-      $('createBtn').onclick = () => { socket.emit('createRoom', { name: $('nameInput').value.trim() || 'Commander' }) };
-      $('joinBtn').onclick = () => {
-        const code = $('codeInput').value.trim().toUpperCase();
-        if (code.length !== 6) return showError('Enter a 6-character code');
-        socket.emit('joinRoom', { name: $('nameInput').value.trim() || 'Commander', code });
-      };
-      $('startBtn').onclick = () => socket.emit('startGame');
-      $('nameInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('createBtn').click() });
-      $('codeInput').addEventListener('keydown', e => { if (e.key === 'Enter') $('joinBtn').click() });
-      function showError(msg) { $('errorMsg').textContent = msg; setTimeout(() => $('errorMsg').textContent = '', 3000) }
-
-      // ─── SOCKET ─────────────────────────────────────────
-      socket.on('error', d => showError(d.msg));
-
-      socket.on('roomCreated', d => {
-        roomCode = d.code; isHost = true;
-        lobby.classList.add('hidden'); waitingRoom.classList.add('show');
-        $('roomCodeDisplay').textContent = d.code; $('startBtn').style.display = 'block'; $('waitingMsg').textContent = 'You are the host';
-        updatePlayerList(d.players);
-      });
-
-      socket.on('roomUpdated', d => {
-        if (!waitingRoom.classList.contains('show') && !gameScreen.classList.contains('show')) { lobby.classList.add('hidden'); waitingRoom.classList.add('show') }
-        updatePlayerList(d.players);
-      });
-
-      function updatePlayerList(pList) {
-        const ul = $('playerList'); ul.innerHTML = '';
-        pList.forEach((p, i) => {
-          const li = document.createElement('li');
-          li.innerHTML = `<span class="player-dot" style="background:${p.colour}"></span>${p.name}${i === 0 ? '<span class="host-badge">HOST</span>' : ''}`;
-          ul.appendChild(li);
-        });
-      }
-
-      socket.on('gameStarted', d => {
-        waitingRoom.classList.remove('show'); gameScreen.classList.add('show');
-        players = d.players; playerColours = {}; playerNames = {}; basePositions = {};
-        d.players.forEach(p => { playerColours[p.id] = p.colour; playerNames[p.id] = p.name; basePositions[p.id] = { row: p.baseRow, col: p.baseCol } });
-        map = [];
-        for (let r = 0; r < MAP_SIZE; r++) { map[r] = []; for (let c = 0; c < MAP_SIZE; c++) { const t = d.map[r][c]; map[r][c] = { type: t.t === 0 ? 'empty' : t.t, owner: t.o } } }
-        const me = players.find(p => p.id === myId);
-        if (me) { const pos = hexToPixel(me.baseRow, me.baseCol); cameraX = pos.x - canvas.width / 2; cameraY = pos.y - canvas.height / 2; resources = me.resources }
-        resizeCanvas(); buildTrainPanel(); requestAnimationFrame(gameLoop);
-        toast('Game started! Capture zones and train units.');
-      });
-
-      socket.on('gameUpdate', d => {
-        if (d.units) {
-          // update smooth positions
-          for (const u of d.units) {
-            const pos = hexToPixel(u.row, u.col);
-            if (!unitPositions[u.id]) { unitPositions[u.id] = { x: pos.x, y: pos.y, targetX: pos.x, targetY: pos.y } }
-            else { unitPositions[u.id].targetX = pos.x; unitPositions[u.id].targetY = pos.y }
-          }
-          units = d.units;
-          // cleanup removed units
-          const ids = new Set(d.units.map(u => u.id));
-          for (const k of Object.keys(unitPositions)) { if (!ids.has(k)) delete unitPositions[k] }
-        }
-        if (d.mapOwnership && map) { for (const ch of d.mapOwnership) { if (map[ch.r]) map[ch.r][ch.c].owner = ch.owner } }
-        updateSelection();
-      });
-
-      socket.on('resourceUpdate', d => { resources = d; updateHud(); updateTrainButtons() });
-      socket.on('playerUpdate', d => { if (d.resources) resources = d.resources; if (d.trainingQueue) trainingQueue = d.trainingQueue; updateHud(); updateQueuePanel(); updateTrainButtons() });
-      socket.on('unitTrained', d => toast(`${d.unitType} trained! 🎖️`));
-      socket.on('trainError', d => toast(d.msg));
-      socket.on('unitsDestroyed', ids => { selectedUnits = selectedUnits.filter(id => !ids.includes(id)); updateSelection() });
-
-      socket.on('unitMoved', (d) => {
-        // handled in gameUpdate, but can do immediate visual
-      });
-
-      socket.on('hexCaptured', d => {
-        if (map && map[d.r]) map[d.r][d.c].owner = d.owner;
-      });
-
-      socket.on('combatResult', d => {
-        const pos = hexToPixel(d.defender.row, d.defender.col);
-        combatFlashes.push({ x: pos.x, y: pos.y, time: Date.now(), color: playerColours[d.attacker.owner] || '#ef4444' });
-        // update HP on local units
-        for (const u of units) {
-          if (u.id === d.attacker.id) u.currentHealth = d.attacker.hp;
-          if (u.id === d.defender.id) u.currentHealth = d.defender.hp;
-        }
-      });
-
-      socket.on('empDetonated', d => {
-        const pos = hexToPixel(d.row, d.col);
-        combatFlashes.push({ x: pos.x, y: pos.y, time: Date.now(), color: '#38bdf8' });
-        toast('⚡ EMP Detonated!', 'combat');
-      });
-
-      socket.on('decoyRevealed', d => {
-        if (d.attackerId === myId || units.find(u => u.id === d.attackerId && u.owner === myId)) {
-          toast('👻 DECOY!', 'combat');
-        }
-      });
-
-      socket.on('navalStrikeEffect', d => {
-        const pos = hexToPixel(d.row, d.col);
-        combatFlashes.push({ x: pos.x, y: pos.y, time: Date.now(), color: '#f59e0b' });
-        toast('💥 Naval Strike!', 'combat');
-      });
-
-      socket.on('bonusUpdate', d => {
-        activeBonuses = d.bonuses;
-        updateBonusPanel();
-        toast('⚡ Bonus activated!', 'bonus');
-      });
-
-      socket.on('playerEliminated', d => {
-        toast(`☠️ ${d.name} eliminated!`, 'combat');
-      });
-
-      socket.on('gameOver', d => {
-        $('gameOverlay').classList.add('show');
-        if (d.winner) {
-          $('goTitle').textContent = d.winner.id === myId ? 'VICTORY!' : 'DEFEAT';
-          $('goTitle').style.color = d.winner.id === myId ? 'var(--green)' : 'var(--red)';
-          const reasons = { domination: 'Domination (70% map)', last_standing: 'Last Standing', draw: 'Draw' };
-          $('goWinner').textContent = `${d.winner.name} wins by ${reasons[d.reason] || d.reason}`;
-        } else {
-          $('goTitle').textContent = 'DRAW'; $('goTitle').style.color = 'var(--dim)'; $('goWinner').textContent = 'No winner';
-        }
-        const tbody = $('goStatsBody'); tbody.innerHTML = '';
-        for (const [pid, s] of Object.entries(d.stats)) {
-          const tr = document.createElement('tr');
-          if (d.winner && pid === d.winner.id) tr.className = 'winner';
-          tr.innerHTML = `<td><span style="color:${s.colour}">■</span> ${s.name}${s.eliminated ? ' ☠️' : ''}</td><td>${s.hexesOwned}</td><td>${s.unitsKilled}</td><td>${s.unitsLost}</td><td>${s.resourcesGathered}</td>`;
-          tbody.appendChild(tr);
-        }
-      });
-
-      // ─── HEX MATH ──────────────────────────────────────
-      function hexToPixel(r, c) { return { x: HEX_W * (c + 0.5 * (r & 1)), y: HEX_H * 0.75 * r } }
-      function pixelToHex(px, py) { const r = Math.round(py / (HEX_H * 0.75)); return { r: Math.max(0, Math.min(MAP_SIZE - 1, r)), c: Math.max(0, Math.min(MAP_SIZE - 1, Math.round(px / HEX_W - 0.5 * (r & 1)))) } }
-
-      // ─── CANVAS ─────────────────────────────────────────
-      function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
-      window.addEventListener('resize', resizeCanvas); resizeCanvas();
-
-      function drawHex(cx, cy, size, fillColor, owner) {
-        ctx.beginPath();
-        for (let i = 0; i < 6; i++) { const a = Math.PI / 180 * (60 * i - 30); if (i === 0) ctx.moveTo(cx + size * Math.cos(a), cy + size * Math.sin(a)); else ctx.lineTo(cx + size * Math.cos(a), cy + size * Math.sin(a)) }
-        ctx.closePath(); ctx.fillStyle = fillColor; ctx.fill();
-        if (owner && playerColours[owner]) { ctx.fillStyle = playerColours[owner] + '28'; ctx.fill() }
-        ctx.strokeStyle = '#ffffff06'; ctx.lineWidth = .5; ctx.stroke();
-      }
-
-      function lerpUnit(id) {
-        const p = unitPositions[id];
-        if (!p) return null;
-        const speed = 0.2;
-        p.x += (p.targetX - p.x) * speed;
-        p.y += (p.targetY - p.y) * speed;
-        return { x: p.x, y: p.y };
-      }
-
-      function draw() {
-        const now = Date.now();
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = TILE_COLOURS[0]; ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (!map) return;
-
-        ctx.save();
-        ctx.translate(-cameraX * zoom, -cameraY * zoom); ctx.scale(zoom, zoom);
-
-        const minR = Math.max(0, Math.floor(cameraY / (HEX_H * 0.75)) - 1);
-        const maxR = Math.min(MAP_SIZE - 1, Math.ceil((cameraY + canvas.height / zoom) / (HEX_H * 0.75)) + 1);
-        const minC = Math.max(0, Math.floor(cameraX / HEX_W) - 1);
-        const maxC = Math.min(MAP_SIZE - 1, Math.ceil((cameraX + canvas.width / zoom) / HEX_W) + 1);
-
-        // tiles
-        for (let r = minR; r <= maxR; r++) {
-          for (let c = minC; c <= maxC; c++) {
-            const pos = hexToPixel(r, c); const tile = map[r][c];
-            drawHex(pos.x, pos.y, HEX_SIZE, TILE_COLOURS[tile.type] || TILE_COLOURS[0], tile.owner);
-            if (tile.type !== 'empty' && tile.type !== 0) { ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(TILE_ICONS[tile.type] || '', pos.x, pos.y) }
-          }
-        }
-
-        // base markers
-        for (const [pid, bp] of Object.entries(basePositions)) {
-          const pos = hexToPixel(bp.row, bp.col);
-          ctx.beginPath(); ctx.arc(pos.x, pos.y, HEX_SIZE * .8, 0, Math.PI * 2);
-          ctx.strokeStyle = (playerColours[pid] || '#fff') + '60'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]); ctx.stroke(); ctx.setLineDash([]);
-          ctx.font = 'bold 8px Orbitron,sans-serif'; ctx.fillStyle = playerColours[pid] || '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-          ctx.fillText('⚑ BASE', pos.x, pos.y - HEX_SIZE * .6);
-        }
-
-        // units with smooth interpolation
-        for (const u of units) {
-          const lp = lerpUnit(u.id);
-          const px = lp ? lp.x : hexToPixel(u.row, u.col).x;
-          const py = lp ? lp.y : hexToPixel(u.row, u.col).y;
-          const col = playerColours[u.owner] || '#fff';
-          const isSelected = selectedUnits.includes(u.id);
-          const isMine = u.owner === myId;
-
-          // selection ring
-          if (isSelected) {
-            ctx.beginPath(); ctx.arc(px, py, HEX_SIZE * .6, 0, Math.PI * 2);
-            ctx.fillStyle = col + '30'; ctx.fill(); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke();
-          }
-
-          // shadow
-          ctx.beginPath(); ctx.ellipse(px, py + HEX_SIZE * .3, HEX_SIZE * .3, HEX_SIZE * .12, 0, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0,0,0,.3)'; ctx.fill();
-
-          // unit body
-          ctx.beginPath(); ctx.arc(px, py, HEX_SIZE * .35, 0, Math.PI * 2);
-          const grad = ctx.createRadialGradient(px - 3, py - 3, 2, px, py, HEX_SIZE * .35);
-          grad.addColorStop(0, col); grad.addColorStop(1, col + 'aa');
-          ctx.fillStyle = grad; ctx.fill();
-          if (isMine) { ctx.strokeStyle = '#ffffff40'; ctx.lineWidth = 1; ctx.stroke() }
-
-          // icon
-          ctx.font = '11px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-          ctx.fillText(UNIT_ICONS[u.type] || '?', px, py);
-
-          // hp bar
-          const maxHp = UNIT_MAX_HP[u.type] || 100; const hp = u.currentHealth / maxHp;
-          const bw = HEX_SIZE * .6;
-          ctx.fillStyle = '#00000080'; ctx.fillRect(px - bw, py - HEX_SIZE * .55, bw * 2, 3);
-          ctx.fillStyle = hp > .5 ? '#22c55e' : hp > .25 ? '#f59e0b' : '#ef4444';
-          ctx.fillRect(px - bw, py - HEX_SIZE * .55, bw * 2 * Math.max(0, hp), 3);
-
-          // frozen
-          if (u.frozen) { ctx.font = '9px serif'; ctx.fillStyle = '#38bdf8'; ctx.fillText('❄️', px + HEX_SIZE * .35, py - HEX_SIZE * .35) }
-
-          // path line for selected own units
-          if (isSelected && isMine && u.targetPath && u.targetPath.length > 0) {
-            ctx.beginPath(); ctx.moveTo(px, py);
-            for (const step of u.targetPath) { const sp = hexToPixel(step.row, step.col); ctx.lineTo(sp.x, sp.y) }
-            ctx.strokeStyle = col + '50'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-          }
-        }
-
-        // combat flashes
-        combatFlashes = combatFlashes.filter(f => now - f.time < 500);
-        for (const f of combatFlashes) {
-          const age = (now - f.time) / 500;
-          ctx.beginPath(); ctx.arc(f.x, f.y, HEX_SIZE * age * 2, 0, Math.PI * 2);
-          ctx.fillStyle = f.color + (Math.floor((1 - age) * 80).toString(16).padStart(2, '0'));
-          ctx.fill();
-        }
-
-        // selection box
-        if (selectionBox) {
-          ctx.strokeStyle = '#38bdf880'; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
-          const bx = Math.min(selectionBox.x1, selectionBox.x2), by = Math.min(selectionBox.y1, selectionBox.y2);
-          ctx.strokeRect(bx, by, Math.abs(selectionBox.x2 - selectionBox.x1), Math.abs(selectionBox.y2 - selectionBox.y1));
-          ctx.fillStyle = '#38bdf810'; ctx.fillRect(bx, by, Math.abs(selectionBox.x2 - selectionBox.x1), Math.abs(selectionBox.y2 - selectionBox.y1));
-          ctx.setLineDash([]);
-        }
-
-        ctx.restore();
-      }
-
-      // ─── MINIMAP ────────────────────────────────────────
-      let mmDirty = true;
-      function drawMinimap() {
-        if (!map) return;
-        const w = 180, h = 180, s = w / MAP_SIZE;
-        mmCtx.fillStyle = '#0a0e17'; mmCtx.fillRect(0, 0, w, h);
-        for (let r = 0; r < MAP_SIZE; r++) {
-          for (let c = 0; c < MAP_SIZE; c++) {
-            const tile = map[r][c];
-            mmCtx.fillStyle = tile.owner ? playerColours[tile.owner] : (tile.type !== 'empty' && tile.type !== 0 ? TILE_COLOURS[tile.type] + '80' : '#1a233240');
-            mmCtx.fillRect(c * s, r * s, s + .5, s + .5);
-          }
-        }
-        for (const u of units) { mmCtx.fillStyle = playerColours[u.owner] || '#fff'; mmCtx.fillRect(u.col * s - .5, u.row * s - .5, 2, 2) }
-        mmCtx.strokeStyle = '#38bdf8'; mmCtx.lineWidth = 1;
-        mmCtx.strokeRect((cameraX / HEX_W) * s, (cameraY / (HEX_H * 0.75)) * s, (canvas.width / zoom / HEX_W) * s, (canvas.height / zoom / (HEX_H * 0.75)) * s);
-      }
-
-      // ─── INPUT ──────────────────────────────────────────
-      let mouseDown = false, rightDown = false, panStart = null;
-
-      canvas.addEventListener('mousedown', e => {
-        if (e.button === 2) { rightDown = true; panStart = { x: e.clientX + cameraX, y: e.clientY + cameraY }; return }
-        mouseDown = true;
-        const wx = e.clientX / zoom + cameraX, wy = e.clientY / zoom + cameraY;
-        selectionBox = { x1: wx, y1: wy, x2: wx, y2: wy };
-      });
-
-      canvas.addEventListener('mousemove', e => {
-        if (rightDown && panStart) { cameraX = panStart.x - e.clientX; cameraY = panStart.y - e.clientY; return }
-        if (mouseDown && selectionBox) { selectionBox.x2 = e.clientX / zoom + cameraX; selectionBox.y2 = e.clientY / zoom + cameraY }
-      });
-
-      canvas.addEventListener('mouseup', e => {
-        if (e.button === 2) { rightDown = false; panStart = null; return }
-        mouseDown = false;
-        if (!selectionBox) return;
-        const bx1 = Math.min(selectionBox.x1, selectionBox.x2), by1 = Math.min(selectionBox.y1, selectionBox.y2);
-        const bx2 = Math.max(selectionBox.x1, selectionBox.x2), by2 = Math.max(selectionBox.y1, selectionBox.y2);
-        if (bx2 - bx1 < 5 && by2 - by1 < 5) {
-          const wx = e.clientX / zoom + cameraX, wy = e.clientY / zoom + cameraY;
-          const hex = pixelToHex(wx, wy);
-          const clicked = units.find(u => u.owner === myId && u.row === hex.r && u.col === hex.c);
-          if (clicked) { selectedUnits = e.shiftKey ? [...selectedUnits, clicked.id] : [clicked.id] }
-          else if (selectedUnits.length > 0) { socket.emit('moveUnits', { unitIds: selectedUnits, row: hex.r, col: hex.c }) }
-          else { selectedUnits = [] }
-        } else {
-          if (!e.shiftKey) selectedUnits = [];
-          for (const u of units) {
-            if (u.owner !== myId) continue;
-            const lp = unitPositions[u.id]; const px = lp ? lp.x : hexToPixel(u.row, u.col).x; const py = lp ? lp.y : hexToPixel(u.row, u.col).y;
-            if (px >= bx1 && px <= bx2 && py >= by1 && py <= by2 && !selectedUnits.includes(u.id)) selectedUnits.push(u.id);
-          }
-        }
-        selectionBox = null; updateSelection();
-      });
-
-      canvas.addEventListener('contextmenu', e => e.preventDefault());
-      canvas.addEventListener('wheel', e => {
-        const oldZoom = zoom; zoom = Math.max(0.3, Math.min(3, zoom - e.deltaY * 0.001));
-        cameraX = (e.clientX / oldZoom + cameraX) - e.clientX / zoom;
-        cameraY = (e.clientY / oldZoom + cameraY) - e.clientY / zoom;
-        e.preventDefault();
-      }, { passive: false });
-
-      $('minimap').addEventListener('click', e => {
-        const rect = $('minimapCanvas').getBoundingClientRect(); const s = 180 / MAP_SIZE;
-        const pos = hexToPixel((e.clientY - rect.top) / s, (e.clientX - rect.left) / s);
-        cameraX = pos.x - canvas.width / 2 / zoom; cameraY = pos.y - canvas.height / 2 / zoom;
-      });
-
-      document.addEventListener('keydown', e => {
-        if (!gameScreen.classList.contains('show')) return;
-        if (e.key === 'Escape') { selectedUnits = []; updateSelection() }
-        if (e.key === 'a' && e.ctrlKey) { e.preventDefault(); selectedUnits = units.filter(u => u.owner === myId).map(u => u.id); updateSelection() }
-      });
-
-      // ─── HUD ────────────────────────────────────────────
-      function updateHud() { $('resWood').textContent = resources.wood || 0; $('resSteel').textContent = resources.steel || 0; $('resFuel').textContent = resources.fuel || 0; $('resSupplies').textContent = resources.supplies || 0; $('resResearch').textContent = resources.research || 0 }
-
-      function buildTrainPanel() {
-        const panel = $('bottomPanel'); panel.innerHTML = '';
-        for (const [type, def] of Object.entries(UNIT_TYPES)) {
-          const btn = document.createElement('div'); btn.className = 'train-btn'; btn.dataset.type = type;
-          const costStr = Object.entries(def.cost).map(([k, v]) => `${v}${k[0].toUpperCase()}`).join(' ');
-          btn.innerHTML = `<span class="train-icon">${UNIT_ICONS[type]}</span><span class="train-name">${type}</span><span class="train-cost">${costStr}</span>`;
-          btn.onclick = () => socket.emit('trainUnit', { unitType: type });
-          panel.appendChild(btn);
-        }
-        updateTrainButtons();
-      }
-
-      function updateTrainButtons() {
-        document.querySelectorAll('.train-btn').forEach(btn => {
-          const def = UNIT_TYPES[btn.dataset.type]; if (!def) return;
-          let ok = true; for (const [r, a] of Object.entries(def.cost)) { if ((resources[r] || 0) < a) { ok = false; break } }
-          btn.classList.toggle('disabled', !ok);
-        });
-      }
-
-      function updateQueuePanel() {
-        const panel = $('queuePanel'), content = $('queueContent');
-        if (trainingQueue.length === 0) { panel.classList.add('hidden'); return }
-        panel.classList.remove('hidden'); content.innerHTML = '';
-        const now = Date.now();
-        for (const item of trainingQueue) {
-          const pct = Math.min(100, (now - item.startTime) / item.duration * 100);
-          const div = document.createElement('div'); div.className = 'queue-item';
-          div.innerHTML = `<span>${UNIT_ICONS[item.unitType] || '?'} ${item.unitType}</span><div class="queue-bar"><div class="queue-bar-fill" style="width:${pct}%"></div></div>`;
-          content.appendChild(div);
-        }
-      }
-
-      function updateSelection() {
-        const panel = $('selectionInfo'), content = $('selContent');
-        if (selectedUnits.length === 0) { panel.classList.add('hidden'); return }
-        panel.classList.remove('hidden');
-        if (selectedUnits.length === 1) {
-          const u = units.find(u => u.id === selectedUnits[0]); if (!u) { panel.classList.add('hidden'); return }
-          const maxHp = UNIT_MAX_HP[u.type] || 100; const hp = u.currentHealth / maxHp * 100;
-          content.innerHTML = `<div class="sel-stat" style="color:var(--text);font-weight:600">${UNIT_ICONS[u.type]} ${u.type}</div>
-      <div class="sel-stat">HP: ${u.currentHealth}/${maxHp}</div>
-      <div class="sel-hp-bar"><div class="sel-hp-fill" style="width:${hp}%;background:${hp > 50 ? 'var(--green)' : hp > 25 ? 'var(--gold)' : 'var(--red)'}"></div></div>
-      <div class="sel-stat" style="margin-top:.3rem">Pos: (${u.row}, ${u.col})</div>${u.frozen ? '<div class="sel-stat" style="color:var(--accent)">❄ FROZEN</div>' : ''}`;
-        } else {
-          const counts = {}; for (const id of selectedUnits) { const u = units.find(u => u.id === id); if (u) counts[u.type] = (counts[u.type] || 0) + 1 }
-          content.innerHTML = `<div class="sel-stat" style="color:var(--text);font-weight:600">${selectedUnits.length} units</div>` + Object.entries(counts).map(([t, n]) => `<div class="sel-stat">${UNIT_ICONS[t]} ${t} ×${n}</div>`).join('');
-        }
-      }
-
-      function updateBonusPanel() {
-        const panel = $('bonusPanel'), content = $('bonusContent');
-        if (activeBonuses.length === 0) { panel.classList.add('hidden'); return }
-        panel.classList.remove('hidden');
-        content.innerHTML = activeBonuses.map(b => `<div class="bonus-item"><span class="bonus-dot"></span>${BONUS_NAMES[b] || b}</div>`).join('');
-      }
-
-      function toast(msg, type) {
-        const div = document.createElement('div'); div.className = 'toast' + (type ? ' ' + type : '');
-        div.textContent = msg; $('toasts').appendChild(div); setTimeout(() => div.remove(), 3000);
-      }
-
-      // ─── GAME LOOP ──────────────────────────────────────
-      let lastMmDraw = 0;
-      function gameLoop(ts) {
-        draw();
-        if (ts - lastMmDraw > 250) { drawMinimap(); lastMmDraw = ts }
-        updateQueuePanel();
-        requestAnimationFrame(gameLoop);
-      }
-
-    })();
-  </script>
+<canvas id="gameCanvas"></canvas>
+<div id="lobbyScreen">
+<div class="logo">FRONTLINE</div>
+<div class="logo-sub">Real-Time Strategy</div>
+<div class="card" id="lobbyCard">
+<h2 id="lobbyTitle">Deploy</h2>
+<div class="field"><label>Commander Name</label><input id="nameIn" placeholder="Enter callsign" maxlength="16" autocomplete="off"></div>
+<label style="font-size:.7rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Colour</label>
+<div class="colours" id="colourPick"></div>
+<button class="btn btn-p" id="createBtn">Create Room</button>
+<div class="divider">OR JOIN</div>
+<div class="field"><label>Room Code</label><input id="codeIn" placeholder="6-char code" maxlength="6" autocomplete="off" style="text-transform:uppercase"></div>
+<button class="btn btn-s" id="joinBtn">Join Room</button>
+<div class="error-msg" id="errMsg"></div>
+<div id="roomView" style="display:none;text-align:center;margin-top:1rem">
+<div style="font-size:.65rem;color:var(--dim);text-transform:uppercase;letter-spacing:.1em">Room Code</div>
+<div class="room-code" id="roomCodeDisp">------</div>
+<ul class="plist" id="pList"></ul>
+<button class="btn btn-p" id="startBtn" style="display:none">Start Game</button>
+<div style="font-size:.7rem;color:var(--dim);margin-top:.5rem" id="waitMsg">Waiting for host...</div>
+</div>
+</div>
+</div>
+<div id="countdownOverlay"><div id="countdownNum">3</div></div>
+<div id="topBar">
+<div class="tb-name"><span class="tb-dot" id="myDot"></span><span id="myName">-</span></div>
+<div class="res-g">
+<div class="res-i">🌲<span class="res-n" id="rWood">0</span></div>
+<div class="res-i">⚙️<span class="res-n" id="rSteel">0</span></div>
+<div class="res-i">⛽<span class="res-n" id="rFuel">0</span></div>
+<div class="res-i">🚢<span class="res-n" id="rSup">0</span></div>
+<div class="res-i">🔬<span class="res-n" id="rRes">0</span></div>
+</div>
+<div class="tb-land" id="landInfo">🏴 0 hexes | 0/0 units</div>
+</div>
+<div id="trainPanel"><div class="tp-head">⚔️ TRAINING</div><div class="tp-queue" id="tQueue"></div><div class="tp-units" id="tUnits"></div></div>
+<button id="mTrainBtn">⚔️</button>
+<div id="minimap"><canvas id="mmCanvas" width="180" height="140"></canvas></div>
+<div id="bonuses"></div>
+<div id="toasts"></div>
+<button id="helpBtn">?</button>
+<div id="helpModal"><div class="help-card">
+<button class="help-close" id="helpClose">✕</button>
+<h2>How to Play</h2>
+<h3>Resources</h3><p>Capture zone hexes to generate resources: 🌲Forest→Wood ⚙️Factory→Steel ⛽Oil→Fuel 🚢Port→Supplies 🔬Lab→Research</p>
+<h3>Units (9 types)</h3>
+<ul><li><b>Scout</b> — Fast recon (20W)</li><li><b>Archer</b> — Range 2 (30W 10S)</li><li><b>Infantry</b> — Fighter (30S)</li><li><b>Tank</b> — Heavy, 2x vs infantry (50S 20F)</li><li><b>Artillery</b> — Splash, min range 2 (40F 30S)</li><li><b>Helicopter</b> — Fast flyer (60F 20S)</li><li><b>Marine</b> — Crosses water (30Sup 20S)</li><li><b>EMP Drone</b> — Freezes enemies (50R 20F)</li><li><b>Decoy</b> — Looks like tank (30R)</li></ul>
+<h3>Unit Cap</h3><p>Max units = territory ÷ 3. Conquer more land!</p>
+<h3>Combination Bonuses</h3>
+<ul><li>Forest+Lab → Ghost Scouts</li><li>Oil+Factory → Armoured Helis</li><li>Port+Forest → Amphibious Archers</li><li>Lab+Factory → Tank Shield</li><li>Oil+Lab → Stealth Drones</li><li>Port+Oil → Naval Artillery</li></ul>
+<h3>Victory</h3><p>Own 70% of map or capture all enemy bases.</p>
+<h3>Controls</h3><p>Left-click: select/move | Right-drag: pan | Scroll: zoom | Ctrl+A: all | Esc: deselect<br>Mobile: Tap, drag pan, pinch zoom</p>
+</div></div>
+<div id="goScreen"><div class="go-t" id="goTitle"></div><div class="go-r" id="goReason"></div><div class="go-stats"><table><thead><tr><th>Player</th><th>Hexes</th><th>Kills</th><th>Lost</th><th>Res</th></tr></thead><tbody id="goBody"></tbody></table></div><div class="go-btns"><button class="btn btn-p" onclick="location.reload()">Play Again</button></div></div>
+<div id="connError"><div class="logo" style="font-size:2rem">FRONTLINE</div><p>Could not connect to server.<br>Make sure <code>node server.js</code> is running.</p></div>
+<div id="builtBy">Built by FRONTLINE</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+'use strict';
+const MAP=80,HS=20,HW=Math.sqrt(3)*HS,HH=2*HS,DPR=window.devicePixelRatio||1;
+const COLOURS=['#e74c3c','#3498db','#2ecc71','#e67e22','#9b59b6','#00bcd4','#f1c40f','#e91e63'];
+const TILE_C={0:'#2a2a2a',empty:'#2a2a2a',forest:'#2d5a27',factory:'#3a5a7a',oil:'#7a6a1a',port:'#1a3a6a',lab:'#5a2a7a'};
+const UMAX={SCOUT:40,ARCHER:60,INFANTRY:100,TANK:250,ARTILLERY:80,HELICOPTER:150,MARINE:120,EMP_DRONE:50,DECOY:30};
+const UCOST={SCOUT:{wood:20},ARCHER:{wood:30,steel:10},INFANTRY:{steel:30},TANK:{steel:50,fuel:20},ARTILLERY:{fuel:40,steel:30},HELICOPTER:{fuel:60,steel:20},MARINE:{supplies:30,steel:20},EMP_DRONE:{research:50,fuel:20},DECOY:{research:30}};
+const UNAMES=['SCOUT','ARCHER','INFANTRY','TANK','ARTILLERY','HELICOPTER','MARINE','EMP_DRONE','DECOY'];
+const BONUS_N={ghostScouts:'Ghost Scouts',armouredHelicopters:'Armoured Helis',amphibiousArchers:'Amphibious Archers',tankShield:'Tank Shield',stealthDrones:'Stealth Drones',navalArtillery:'Naval Artillery'};
+let socket,myId,isHost=false,roomCode='',selColour=COLOURS[0];
+let map=null,players=[],units=[],res={wood:0,steel:0,fuel:0,supplies:0,research:0};
+let tQueue=[],aBonuses=[],selUnits=[],pColours={},pNames={},bases={};
+let cam={x:0,y:0,zoom:1,minZoom:.3,maxZoom:3};
+let particles=[],maxPart=200;
+let hexOwned=0,maxUnits=0,curUnits=0;
+let gameActive=false,isMobile='ontouchstart'in window;
+let prevRes={...res};
+const $=id=>document.getElementById(id);
+const cv=$('gameCanvas'),ctx=cv.getContext('2d');
+const mm=$('mmCanvas'),mctx=mm.getContext('2d');
+let uPos={};
+// Sound
+const SND=(()=>{let ac;function g(){if(!ac)ac=new(window.AudioContext||window.webkitAudioContext)();return ac;}
+function o(t,f,d,v=.15,s=0){const a=g(),os=a.createOscillator(),gn=a.createGain();os.type=t;os.frequency.setValueAtTime(f,a.currentTime+s);gn.gain.setValueAtTime(v,a.currentTime+s);gn.gain.exponentialRampToValueAtTime(.001,a.currentTime+s+d);os.connect(gn);gn.connect(a.destination);os.start(a.currentTime+s);os.stop(a.currentTime+s+d);}
+function n(d,v=.1){const a=g(),b=a.createBuffer(1,a.sampleRate*d,a.sampleRate),dt=b.getChannelData(0);for(let i=0;i<dt.length;i++)dt[i]=Math.random()*2-1;const s=a.createBufferSource(),gn=a.createGain();s.buffer=b;gn.gain.setValueAtTime(v,a.currentTime);gn.gain.exponentialRampToValueAtTime(.001,a.currentTime+d);s.connect(gn);gn.connect(a.destination);s.start();s.stop(a.currentTime+d);}
+let ao=null;
+return{playPing(){o('sine',880,.15,.1);o('sine',1100,.1,.08,.05)},playThud(){o('sine',80,.2,.2);o('sine',60,.15,.15,.05)},playImpact(){n(.15,.15);o('square',200,.1,.08)},playEMP(){o('sawtooth',600,.1,.1);o('sawtooth',800,.08,.08,.05);o('sawtooth',1200,.06,.06,.1)},playBoom(){o('sine',50,.4,.25);n(.3,.2)},playVictory(){o('sine',523,.2,.15);o('sine',659,.2,.12,.15);o('sine',784,.3,.15,.3);o('sine',1047,.4,.12,.5)},playDefeat(){o('sine',400,.3,.12);o('sine',300,.3,.1,.2);o('sine',200,.5,.08,.4)},
+startAmbient(){try{const a=g();ao=a.createOscillator();const gn=a.createGain();ao.type='sine';ao.frequency.setValueAtTime(55,a.currentTime);gn.gain.setValueAtTime(.03,a.currentTime);ao.connect(gn);gn.connect(a.destination);ao.start()}catch(e){}},
+stopAmbient(){try{if(ao){ao.stop();ao=null}}catch(e){}}};})();
+// Hex math
+function hexToPixel(r,c){return{x:HW*(c+.5*(r&1)),y:HH*.75*r}}
+function pixelToHex(px,py){const r=Math.round(py/(HH*.75)),c=Math.round(px/HW-.5*(r&1));return{r:Math.max(0,Math.min(MAP-1,r)),c:Math.max(0,Math.min(MAP-1,c))}}
+function screenToWorld(sx,sy){return{x:sx/cam.zoom+cam.x,y:sy/cam.zoom+cam.y}}
+// Canvas
+function resizeCV(){cv.width=window.innerWidth*DPR;cv.height=window.innerHeight*DPR;cv.style.width=window.innerWidth+'px';cv.style.height=window.innerHeight+'px';ctx.setTransform(DPR,0,0,DPR,0,0)}
+window.addEventListener('resize',resizeCV);resizeCV();
+function hexPath(cx,cy,s){ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/3*i-Math.PI/6;i===0?ctx.moveTo(cx+s*Math.cos(a),cy+s*Math.sin(a)):ctx.lineTo(cx+s*Math.cos(a),cy+s*Math.sin(a))}ctx.closePath()}
+// Unit shapes
+function drawUnit(type,cx,cy,s,col){ctx.fillStyle=col;ctx.strokeStyle=col;ctx.lineWidth=1.5;
+switch(type){
+case'SCOUT':ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx-s*.7,cy+s*.6);ctx.lineTo(cx+s*.7,cy+s*.6);ctx.closePath();ctx.fill();break;
+case'ARCHER':ctx.beginPath();ctx.arc(cx,cy,s*.6,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(cx-s,cy);ctx.lineTo(cx+s,cy);ctx.stroke();break;
+case'INFANTRY':ctx.fillRect(cx-s*.6,cy-s*.6,s*1.2,s*1.2);break;
+case'TANK':ctx.fillRect(cx-s*.9,cy-s*.3,s*1.8,s*.8);ctx.fillRect(cx-s*.4,cy-s*.7,s*.8,s*.5);break;
+case'ARTILLERY':ctx.beginPath();ctx.arc(cx,cy,s*.5,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+s*1.3,cy-s*.6);ctx.lineWidth=2;ctx.stroke();ctx.lineWidth=1.5;break;
+case'HELICOPTER':ctx.beginPath();ctx.ellipse(cx,cy+2,s*.7,s*.4,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(cx-s,cy-s*.3);ctx.lineTo(cx+s,cy-s*.3);ctx.stroke();ctx.beginPath();ctx.moveTo(cx-s*.5,cy-s*.6);ctx.lineTo(cx+s*.5,cy-s*.6);ctx.stroke();ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(cx+2,cy+s+2,s*.5,s*.15,0,0,Math.PI*2);ctx.fill();break;
+case'MARINE':ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx-s*.7,cy+s*.4);ctx.lineTo(cx+s*.7,cy+s*.4);ctx.closePath();ctx.fill();ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(cx-s*.8,cy+s*.7);ctx.quadraticCurveTo(cx,cy+s*.3,cx+s*.8,cy+s*.7);ctx.stroke();break;
+case'EMP_DRONE':ctx.beginPath();ctx.moveTo(cx,cy-s);ctx.lineTo(cx+s*.7,cy);ctx.lineTo(cx,cy+s);ctx.lineTo(cx-s*.7,cy);ctx.closePath();ctx.fill();ctx.strokeStyle='#38bdf8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy-s*.4);ctx.lineTo(cx+s*.2,cy);ctx.lineTo(cx-s*.2,cy);ctx.lineTo(cx,cy+s*.4);ctx.stroke();break;
+case'DECOY':ctx.fillRect(cx-s*.9,cy-s*.3,s*1.8,s*.8);ctx.fillRect(cx-s*.4,cy-s*.7,s*.8,s*.5);break;
+default:ctx.beginPath();ctx.arc(cx,cy,s*.5,0,Math.PI*2);ctx.fill()}}
+// Particles
+function addP(x,y,type,col,val){if(particles.length>=maxPart)particles.shift();particles.push({x,y,type,col,val,t:Date.now(),dur:type==='dmg'?1000:type==='ripple'?800:600,vx:(Math.random()-.5)*2,vy:type==='dmg'?-2:(Math.random()-.5)*2})}
+function drawP(now){for(let i=particles.length-1;i>=0;i--){const p=particles[i],age=(now-p.t)/p.dur;if(age>=1){particles.splice(i,1);continue}const a=1-age;ctx.globalAlpha=a;
+if(p.type==='dmg'){ctx.fillStyle=p.col||'#ef4444';ctx.font='bold 12px Rajdhani';ctx.textAlign='center';ctx.fillText('-'+p.val,p.x+p.vx*age*20,p.y+p.vy*age*40)}
+else if(p.type==='ripple'){ctx.strokeStyle=p.col||'#38bdf8';ctx.lineWidth=2;ctx.beginPath();ctx.arc(p.x,p.y,HS*age*3,0,Math.PI*2);ctx.stroke()}
+else if(p.type==='boom'){ctx.fillStyle=p.col||'#f59e0b';ctx.beginPath();ctx.arc(p.x+p.vx*age*30,p.y+p.vy*age*30,3+age*8,0,Math.PI*2);ctx.fill()}
+else if(p.type==='emp'){ctx.strokeStyle='#38bdf8';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(p.x+p.vx*age*50,p.y+p.vy*age*50);ctx.stroke()}
+else{ctx.fillStyle=p.col||'#fff';ctx.beginPath();ctx.arc(p.x+p.vx*age*25,p.y+p.vy*age*25,2+age*5,0,Math.PI*2);ctx.fill()}
+ctx.globalAlpha=1}}
+// Colour picker
+const cp=$('colourPick');
+COLOURS.forEach(c=>{const d=document.createElement('div');d.className='cswatch'+(c===selColour?' active':'');d.style.background=c;d.onclick=()=>{document.querySelectorAll('.cswatch').forEach(s=>s.classList.remove('active'));d.classList.add('active');selColour=c};cp.appendChild(d)});
+// Socket
+let connTimer=setTimeout(()=>{$('connError').classList.add('show')},4000);
+socket=io();
+socket.on('connect',()=>{clearTimeout(connTimer);$('connError').classList.remove('show');myId=socket.id});
+socket.on('disconnect',()=>$('connError').classList.add('show'));
+function showErr(m){$('errMsg').textContent=m;setTimeout(()=>$('errMsg').textContent='',3000)}
+$('createBtn').onclick=()=>{socket.emit('createRoom',{name:$('nameIn').value.trim()||'Commander',colour:selColour})};
+$('joinBtn').onclick=()=>{const c=$('codeIn').value.trim().toUpperCase();if(c.length!==6)return showErr('Enter 6-char code');socket.emit('joinRoom',{name:$('nameIn').value.trim()||'Commander',code:c,colour:selColour})};
+$('startBtn').onclick=()=>socket.emit('startGame');
+$('nameIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('createBtn').click()});
+$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('joinBtn').click()});
+socket.on('error',d=>showErr(d.msg));
+socket.on('roomCreated',d=>{roomCode=d.code;isHost=true;$('lobbyTitle').textContent='War Room';$('createBtn').style.display='none';$('joinBtn').style.display='none';document.querySelector('.divider').style.display='none';document.querySelectorAll('.field')[1].style.display='none';$('roomView').style.display='block';$('roomCodeDisp').textContent=d.code;$('startBtn').style.display='block';$('waitMsg').textContent='You are the host';updPL(d.players)});
+socket.on('roomUpdated',d=>{if($('roomView').style.display==='none'){$('lobbyTitle').textContent='War Room';$('roomView').style.display='block';$('createBtn').style.display='none';$('joinBtn').style.display='none'}updPL(d.players)});
+function updPL(pl){$('pList').innerHTML='';pl.forEach((p,i)=>{const li=document.createElement('li');li.innerHTML=`<span class="pdot" style="background:${p.colour}"></span>${p.name}${i===0?'<span class="host-b">HOST</span>':''}`;$('pList').appendChild(li)})}
+socket.on('countdown',n=>{$('countdownOverlay').classList.add('show');let c=n;$('countdownNum').textContent=c;const iv=setInterval(()=>{c--;if(c<=0){clearInterval(iv);$('countdownOverlay').classList.remove('show')}else $('countdownNum').textContent=c},1000)});
+socket.on('gameStarted',d=>{$('lobbyScreen').classList.add('hidden');$('topBar').classList.add('show');$('minimap').classList.add('show');$('helpBtn').classList.add('show');
+if(!isMobile)$('trainPanel').classList.add('show');players=d.players;pColours={};pNames={};bases={};
+d.players.forEach(p=>{pColours[p.id]=p.colour;pNames[p.id]=p.name;bases[p.id]={row:p.baseRow,col:p.baseCol}});
+map=[];for(let r=0;r<MAP;r++){map[r]=[];for(let c=0;c<MAP;c++){const t=d.map[r][c];map[r][c]={type:t.t===0?'empty':t.t,owner:t.o}}}
+const me=d.players.find(p=>p.id===myId);
+if(me){const p=hexToPixel(me.baseRow,me.baseCol);cam.x=p.x-window.innerWidth/2;cam.y=p.y-window.innerHeight/2;res=me.resources;$('myDot').style.background=me.colour;$('myName').textContent=me.name}
+buildTP();gameActive=true;SND.startAmbient();requestAnimationFrame(gameLoop);toast('Game started! Conquer land to train units.')});
+socket.on('gameUpdate',d=>{if(d.units){for(const u of d.units){const p=hexToPixel(u.row,u.col);if(!uPos[u.id])uPos[u.id]={x:p.x,y:p.y,tx:p.x,ty:p.y};else{uPos[u.id].tx=p.x;uPos[u.id].ty=p.y}}units=d.units;const ids=new Set(d.units.map(u=>u.id));for(const k in uPos)if(!ids.has(k))delete uPos[k]}
+if(d.mapOwnership&&map)for(const ch of d.mapOwnership)if(map[ch.r])map[ch.r][ch.c].owner=ch.owner});
+socket.on('resourceUpdate',d=>{prevRes={...res};res={wood:d.wood||0,steel:d.steel||0,fuel:d.fuel||0,supplies:d.supplies||0,research:d.research||0};hexOwned=d._hexes||0;maxUnits=d._maxUnits||0;curUnits=d._currentUnits||0;updHud();updTB()});
+socket.on('playerUpdate',d=>{if(d.resources){prevRes={...res};res=d.resources}if(d.trainingQueue)tQueue=d.trainingQueue;if(d.maxUnits!==undefined)maxUnits=d.maxUnits;if(d.currentUnits!==undefined)curUnits=d.currentUnits;updHud();updTB()});
+socket.on('unitTrained',d=>{toast(d.unitType+' trained! 🎖️');SND.playPing()});
+socket.on('unitSpawned',()=>SND.playPing());
+socket.on('trainError',d=>toast(d.msg));
+socket.on('unitsDestroyed',ids=>{selUnits=selUnits.filter(id=>!ids.includes(id));for(const id of ids){const u=units.find(u=>u.id===id);if(u){const p=hexToPixel(u.row,u.col);for(let i=0;i<8;i++)addP(p.x,p.y,'death',pColours[u.owner])}}});
+socket.on('hexCaptured',d=>{if(map&&map[d.r])map[d.r][d.c].owner=d.owner;SND.playThud();const p=hexToPixel(d.r,d.c);addP(p.x,p.y,'ripple',pColours[d.owner]);if(d.owner===myId&&isMobile)try{navigator.vibrate(50)}catch(e){}});
+socket.on('combatResult',d=>{SND.playImpact();const dp=hexToPixel(d.defender.row,d.defender.col);addP(dp.x,dp.y,'dmg','#ef4444',d.damage||'!');for(const u of units){if(u.id===d.attacker.id)u.currentHealth=d.attacker.hp;if(u.id===d.defender.id)u.currentHealth=d.defender.hp}});
+socket.on('artilleryStrike',d=>{SND.playBoom();const p=hexToPixel(d.row,d.col);for(let i=0;i<15;i++)addP(p.x,p.y,'boom','#f59e0b')});
+socket.on('empDetonated',d=>{SND.playEMP();const p=hexToPixel(d.row,d.col);for(let i=0;i<12;i++)addP(p.x,p.y,'emp','#38bdf8');toast('⚡ EMP Detonated!')});
+socket.on('decoyRevealed',d=>{const p=hexToPixel(d.row,d.col);addP(p.x,p.y,'dmg','#f1c40f','DECOY!');toast('👻 DECOY!')});
+socket.on('bonusUpdate',d=>{aBonuses=d.bonuses;updBP();toast('⚡ Bonus activated!')});
+socket.on('playerEliminated',d=>toast('☠️ '+d.name+' eliminated!'));
+socket.on('gameOver',d=>{gameActive=false;SND.stopAmbient();
+if(d.winner&&d.winner.id===myId)SND.playVictory();else SND.playDefeat();
+$('goScreen').classList.add('show');$('goTitle').textContent=d.winner&&d.winner.id===myId?'VICTORY!':'DEFEAT';
+$('goTitle').style.color=d.winner&&d.winner.id===myId?'var(--green)':'var(--red)';
+const R={domination:'Domination (70%)',last_standing:'Last Standing',draw:'Draw'};
+$('goReason').textContent=d.winner?d.winner.name+' wins — '+(R[d.reason]||d.reason):'Draw';
+$('goBody').innerHTML='';for(const[pid,s]of Object.entries(d.stats)){const tr=document.createElement('tr');if(d.winner&&pid===d.winner.id)tr.className='w';tr.innerHTML='<td><span style="color:'+s.colour+'">■</span> '+s.name+(s.eliminated?' ☠️':'')+'</td><td>'+s.hexesOwned+'</td><td>'+s.unitsKilled+'</td><td>'+s.unitsLost+'</td><td>'+s.resourcesGathered+'</td>';$('goBody').appendChild(tr)}});
+// HUD
+function updHud(){[['rWood','wood'],['rSteel','steel'],['rFuel','fuel'],['rSup','supplies'],['rRes','research']].forEach(([id,k])=>{const el=$(id);const nv=res[k]||0;if(nv>(prevRes[k]||0)){el.classList.add('up');setTimeout(()=>el.classList.remove('up'),500)}el.textContent=nv});
+$('landInfo').textContent='🏴 '+hexOwned+' hexes | '+curUnits+'/'+maxUnits+' units'}
+function buildTP(){const c=$('tUnits');c.innerHTML='';UNAMES.forEach(type=>{const cost=UCOST[type];const div=document.createElement('div');div.className='tu-card';const cs=Object.entries(cost).map(([k,v])=>v+' '+k).join(', ');
+div.innerHTML='<div class="tu-top"><span class="tu-name">'+type.replace('_',' ')+'</span></div><div class="tu-cost">'+cs+'</div><button class="tu-btn" data-t="'+type+'">TRAIN</button>';
+div.querySelector('.tu-btn').onclick=()=>socket.emit('trainUnit',{unitType:type});c.appendChild(div)});updTB()}
+function updTB(){document.querySelectorAll('.tu-btn').forEach(b=>{const t=b.dataset.t,cost=UCOST[t];let ok=true;for(const[k,v]of Object.entries(cost))if((res[k]||0)<v){ok=false;break}if(curUnits>=maxUnits)ok=false;b.disabled=!ok});
+const qd=$('tQueue');qd.innerHTML='';const now=Date.now();if(tQueue.length===0){qd.style.display='none';return}qd.style.display='block';
+tQueue.forEach(item=>{const pct=Math.min(100,(now-item.startTime)/item.duration*100);const d=document.createElement('div');d.className='tq-item';d.innerHTML='<span style="font-size:.65rem">'+item.unitType.replace('_',' ')+'</span><div class="tq-bar"><div class="tq-fill" style="width:'+pct+'%"></div></div>';qd.appendChild(d)})}
+function updBP(){const bp=$('bonuses');bp.innerHTML='';if(aBonuses.length===0){bp.classList.remove('show');return}bp.classList.add('show');aBonuses.forEach(b=>{const d=document.createElement('div');d.className='bonus-i';d.innerHTML=(BONUS_N[b]||b)+'<div class="bonus-tip">'+b+'</div>';bp.appendChild(d)})}
+function toast(msg){const d=document.createElement('div');d.className='toast';d.textContent=msg;$('toasts').appendChild(d);setTimeout(()=>d.remove(),3000)}
+let trainOpen=false;$('mTrainBtn').onclick=()=>{trainOpen=!trainOpen;$('trainPanel').classList.toggle('show',trainOpen)};
+$('helpBtn').onclick=()=>$('helpModal').classList.add('show');
+$('helpClose').onclick=()=>$('helpModal').classList.remove('show');
+$('helpModal').onclick=e=>{if(e.target===$('helpModal'))$('helpModal').classList.remove('show')};
+// Input
+let mouseDown=false,rightDown=false,panSt=null,selBox=null;
+cv.addEventListener('mousedown',e=>{if(e.button===2){rightDown=true;panSt={x:e.clientX/cam.zoom+cam.x,y:e.clientY/cam.zoom+cam.y};return}mouseDown=true;const w=screenToWorld(e.clientX,e.clientY);selBox={x1:w.x,y1:w.y,x2:w.x,y2:w.y}});
+cv.addEventListener('mousemove',e=>{if(rightDown&&panSt){cam.x=panSt.x-e.clientX/cam.zoom;cam.y=panSt.y-e.clientY/cam.zoom;return}if(mouseDown&&selBox){const w=screenToWorld(e.clientX,e.clientY);selBox.x2=w.x;selBox.y2=w.y}});
+cv.addEventListener('mouseup',e=>{if(e.button===2){rightDown=false;panSt=null;return}mouseDown=false;if(!selBox||!gameActive)return;
+const bx1=Math.min(selBox.x1,selBox.x2),by1=Math.min(selBox.y1,selBox.y2),bx2=Math.max(selBox.x1,selBox.x2),by2=Math.max(selBox.y1,selBox.y2);
+if(bx2-bx1<5&&by2-by1<5){const w=screenToWorld(e.clientX,e.clientY);const h=pixelToHex(w.x,w.y);
+const clicked=units.filter(u=>u.owner===myId&&u.row===h.r&&u.col===h.c);
+if(clicked.length>0){selUnits=e.shiftKey?[...selUnits,...clicked.map(u=>u.id)]:clicked.map(u=>u.id);if(isMobile)try{navigator.vibrate(50)}catch(x){}}
+else if(selUnits.length>0){socket.emit('moveUnits',{unitIds:selUnits,row:h.r,col:h.c})}else{selUnits=[]}}
+else{if(!e.shiftKey)selUnits=[];for(const u of units){if(u.owner!==myId)continue;const p=uPos[u.id];const px=p?p.x:hexToPixel(u.row,u.col).x;const py=p?p.y:hexToPixel(u.row,u.col).y;
+if(px>=bx1&&px<=bx2&&py>=by1&&py<=by2&&!selUnits.includes(u.id))selUnits.push(u.id)}}selBox=null});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{const oz=cam.zoom;cam.zoom=Math.max(cam.minZoom,Math.min(cam.maxZoom,cam.zoom-e.deltaY*.001));cam.x+=(e.clientX/oz-e.clientX/cam.zoom);cam.y+=(e.clientY/oz-e.clientY/cam.zoom);e.preventDefault()},{passive:false});
+// Touch
+let touches={},lastTD=0;
+cv.addEventListener('touchstart',e=>{e.preventDefault();for(const t of e.changedTouches)touches[t.identifier]={x:t.clientX,y:t.clientY,sx:t.clientX,sy:t.clientY};
+if(e.touches.length===2){const[a,b]=[e.touches[0],e.touches[1]];lastTD=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY)}},{passive:false});
+cv.addEventListener('touchmove',e=>{e.preventDefault();if(e.touches.length===2){const[a,b]=[e.touches[0],e.touches[1]];const d=Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);if(lastTD>0){const s=d/lastTD,mx=(a.clientX+b.clientX)/2,my=(a.clientY+b.clientY)/2,oz=cam.zoom;cam.zoom=Math.max(cam.minZoom,Math.min(cam.maxZoom,cam.zoom*s));cam.x+=(mx/oz-mx/cam.zoom);cam.y+=(my/oz-my/cam.zoom)}lastTD=d;return}
+if(e.touches.length===1){const t=e.touches[0],pr=touches[t.identifier];if(pr){cam.x-=(t.clientX-pr.x)/cam.zoom;cam.y-=(t.clientY-pr.y)/cam.zoom;pr.x=t.clientX;pr.y=t.clientY}}},{passive:false});
+cv.addEventListener('touchend',e=>{for(const t of e.changedTouches){const s=touches[t.identifier];
+if(s&&Math.abs(t.clientX-s.sx)<10&&Math.abs(t.clientY-s.sy)<10&&gameActive){const w=screenToWorld(t.clientX,t.clientY);const h=pixelToHex(w.x,w.y);
+const cl=units.filter(u=>u.owner===myId&&u.row===h.r&&u.col===h.c);
+if(cl.length>0){selUnits=cl.map(u=>u.id);try{navigator.vibrate(50)}catch(x){}}
+else if(selUnits.length>0){socket.emit('moveUnits',{unitIds:selUnits,row:h.r,col:h.c});selUnits=[]}}
+delete touches[t.identifier]}if(e.touches.length<2)lastTD=0});
+document.addEventListener('keydown',e=>{if(!gameActive)return;if(e.key==='Escape')selUnits=[];if(e.key==='a'&&e.ctrlKey){e.preventDefault();selUnits=units.filter(u=>u.owner===myId).map(u=>u.id)}});
+// Minimap
+$('minimap').addEventListener('click',e=>{const rect=mm.getBoundingClientRect();const s=180/MAP;const c2=(e.clientX-rect.left)/s,r2=(e.clientY-rect.top)/(140/MAP);const p=hexToPixel(r2,c2);cam.x=p.x-window.innerWidth/2/cam.zoom;cam.y=p.y-window.innerHeight/2/cam.zoom});
+function drawMM(){if(!map)return;const w=180,h=140,sx=w/MAP,sy=h/MAP;mctx.fillStyle='#0d0d14';mctx.fillRect(0,0,w,h);
+for(let r=0;r<MAP;r++)for(let c=0;c<MAP;c++){const t=map[r][c];mctx.fillStyle=t.owner?pColours[t.owner]:(t.type!=='empty'&&t.type!==0?TILE_C[t.type]+'80':'#2a2a2a40');mctx.fillRect(c*sx,r*sy,sx+.5,sy+.5)}
+for(const u of units){mctx.fillStyle=pColours[u.owner]||'#fff';mctx.fillRect(u.col*sx-.5,u.row*sy-.5,2,2)}
+mctx.strokeStyle='#38bdf8';mctx.lineWidth=1;mctx.strokeRect((cam.x/HW)*sx,(cam.y/(HH*.75))*sy,(window.innerWidth/cam.zoom/HW)*sx,(window.innerHeight/cam.zoom/(HH*.75))*sy)}
+// Main draw
+function draw(now){const W=window.innerWidth,H=window.innerHeight;ctx.clearRect(0,0,W,H);ctx.fillStyle='#0d0d14';ctx.fillRect(0,0,W,H);if(!map)return;
+ctx.save();ctx.translate(-cam.x*cam.zoom,-cam.y*cam.zoom);ctx.scale(cam.zoom,cam.zoom);
+const minR=Math.max(0,Math.floor(cam.y/(HH*.75))-2),maxR=Math.min(MAP-1,Math.ceil((cam.y+H/cam.zoom)/(HH*.75))+2);
+const minC=Math.max(0,Math.floor(cam.x/HW)-2),maxC=Math.min(MAP-1,Math.ceil((cam.x+W/cam.zoom)/HW)+2);
+const glowT=Math.sin(now*.002)*.3+.7;
+for(let r=minR;r<=maxR;r++){for(let c=minC;c<=maxC;c++){const p=hexToPixel(r,c),t=map[r][c];hexPath(p.x,p.y,HS);ctx.fillStyle=TILE_C[t.type]||TILE_C[0];ctx.fill();
+if(t.owner&&pColours[t.owner]){ctx.fillStyle=pColours[t.owner]+'99';ctx.fill()}
+if(t.type!=='empty'&&t.type!==0&&!t.owner){ctx.strokeStyle=TILE_C[t.type];ctx.lineWidth=1.5;ctx.globalAlpha=glowT*.3;ctx.stroke();ctx.globalAlpha=1}
+ctx.strokeStyle='#ffffff06';ctx.lineWidth=.5;ctx.stroke()}}
+for(const[pid,bp]of Object.entries(bases)){const p=hexToPixel(bp.row,bp.col);ctx.strokeStyle=(pColours[pid]||'#fff')+'80';ctx.lineWidth=2;ctx.setLineDash([3,3]);ctx.beginPath();ctx.arc(p.x,p.y,HS*.9,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.font='bold 7px Orbitron';ctx.fillStyle=pColours[pid]||'#fff';ctx.textAlign='center';ctx.fillText('⚑',p.x,p.y-HS*.7)}
+const hxU={};for(const u of units){const k=u.row+','+u.col;if(!hxU[k])hxU[k]=[];hxU[k].push(u)}
+for(const u of units){const lp=uPos[u.id];if(lp){lp.x+=(lp.tx-lp.x)*.2;lp.y+=(lp.ty-lp.y)*.2}
+const px=lp?lp.x:hexToPixel(u.row,u.col).x;const py=lp?lp.y:hexToPixel(u.row,u.col).y;
+const col=pColours[u.owner]||'#fff';const isSel=selUnits.includes(u.id);
+if(isSel){ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,HS*.55,0,Math.PI*2);ctx.stroke();ctx.fillStyle=col+'20';ctx.fill()}
+if(u.frozen){hexPath(px,py,HS);ctx.fillStyle='rgba(56,189,248,.2)';ctx.fill()}
+drawUnit(u.type,px,py,7,col);
+const maxHp=UMAX[u.type]||100;const hp=Math.max(0,u.currentHealth/maxHp);const bw=HS*.5;
+ctx.fillStyle='#00000080';ctx.fillRect(px-bw,py-HS*.5,bw*2,2.5);ctx.fillStyle=hp>.5?'#22c55e':hp>.25?'#f59e0b':'#ef4444';ctx.fillRect(px-bw,py-HS*.5,bw*2*hp,2.5);
+const k=u.row+','+u.col;if(hxU[k]&&hxU[k].length>1&&hxU[k][0].id===u.id){ctx.fillStyle='#fff';ctx.font='bold 8px Rajdhani';ctx.textAlign='center';ctx.fillText(hxU[k].length,px+HS*.45,py-HS*.35)}
+if(isSel&&u.owner===myId&&u.targetPath&&u.targetPath.length>0){ctx.beginPath();ctx.moveTo(px,py);u.targetPath.forEach(s=>{const sp=hexToPixel(s.row,s.col);ctx.lineTo(sp.x,sp.y)});ctx.strokeStyle=col+'40';ctx.lineWidth=1;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([])}}
+if(selBox){ctx.strokeStyle='#38bdf870';ctx.lineWidth=1;ctx.setLineDash([4,4]);const bx=Math.min(selBox.x1,selBox.x2),by=Math.min(selBox.y1,selBox.y2);
+ctx.strokeRect(bx,by,Math.abs(selBox.x2-selBox.x1),Math.abs(selBox.y2-selBox.y1));ctx.fillStyle='#38bdf810';ctx.fillRect(bx,by,Math.abs(selBox.x2-selBox.x1),Math.abs(selBox.y2-selBox.y1));ctx.setLineDash([])}
+drawP(now);ctx.restore()}
+let lastMM=0;
+function gameLoop(ts){draw(ts);if(ts-lastMM>300){drawMM();lastMM=ts}if(gameActive)updTB();requestAnimationFrame(gameLoop)}
+</script>
 </body>
-
 </html>
