@@ -11,18 +11,20 @@ app.use(express.static(__dirname));
 
 // ─── UNIT DEFINITIONS ───────────────────────────────────────────────
 const UNIT_TYPES = {
-  SCOUT:      { cost:{wood:20}, trainTime:5000, health:40, attack:8, moveInterval:500, attackRange:1, visionRange:3, requiredZone:'forest' },
-  ARCHER:     { cost:{wood:30,steel:10}, trainTime:8000, health:60, attack:20, moveInterval:1000, attackRange:2, requiredZone:'forest' },
-  INFANTRY:   { cost:{steel:30}, trainTime:8000, health:100, attack:25, moveInterval:1000, attackRange:1, requiredZone:'factory' },
-  TANK:       { cost:{steel:50,fuel:20}, trainTime:15000, health:250, attack:60, moveInterval:2000, attackRange:1, requiredZone:'factory' },
-  ARTILLERY:  { cost:{fuel:40,steel:30}, trainTime:20000, health:80, attack:80, moveInterval:3000, attackRange:4, minRange:2, areaAttack:true, requiredZone:'oil' },
-  HELICOPTER: { cost:{fuel:60,steel:20}, trainTime:25000, health:150, attack:45, moveInterval:333, attackRange:1, canFlyOver:true, requiredZone:'oil' },
-  MARINE:     { cost:{supplies:30,steel:20}, trainTime:10000, health:120, attack:35, moveInterval:1000, attackRange:1, canCrossWater:true, requiredZone:'port' },
-  EMP_DRONE:  { cost:{research:50,fuel:20}, trainTime:20000, health:50, attack:5, moveInterval:500, empRange:3, empDuration:6000, requiredZone:'lab' },
-  DECOY:      { cost:{research:30}, trainTime:8000, health:30, attack:0, moveInterval:1000, isDecoy:true, requiredZone:'lab' }
+  SCOUT: { cost: { wood: 20 }, trainTime: 5000, health: 40, attack: 8, moveInterval: 500, attackRange: 1, visionRange: 3, requiredZone: 'forest' },
+  ARCHER: { cost: { wood: 30, steel: 10 }, trainTime: 8000, health: 60, attack: 20, moveInterval: 1000, attackRange: 2, requiredZone: 'forest' },
+  INFANTRY: { cost: { steel: 30 }, trainTime: 8000, health: 100, attack: 25, moveInterval: 1000, attackRange: 1, requiredZone: 'factory' },
+  TANK: { cost: { steel: 50, fuel: 20 }, trainTime: 15000, health: 250, attack: 60, moveInterval: 2000, attackRange: 1, requiredZone: 'factory' },
+  ARTILLERY: { cost: { fuel: 40, steel: 30 }, trainTime: 20000, health: 80, attack: 80, moveInterval: 3000, attackRange: 4, minRange: 2, areaAttack: true, requiredZone: 'oil' },
+  HELICOPTER: { cost: { fuel: 60, steel: 20 }, trainTime: 25000, health: 150, attack: 45, moveInterval: 333, attackRange: 1, canFlyOver: true, requiredZone: 'oil' },
+  MARINE: { cost: { supplies: 30, steel: 20 }, trainTime: 10000, health: 120, attack: 35, moveInterval: 1000, attackRange: 1, canCrossWater: true, requiredZone: 'port' },
+  EMP_DRONE: { cost: { research: 50, fuel: 20 }, trainTime: 20000, health: 50, attack: 5, moveInterval: 500, empRange: 3, empDuration: 6000, requiredZone: 'lab' },
+  DECOY: { cost: { research: 30 }, trainTime: 8000, health: 30, attack: 0, moveInterval: 1000, isDecoy: true, requiredZone: 'lab' }
 };
 
 const MAP_SIZE = 80;
+const TOTAL_HEXES = MAP_SIZE * MAP_SIZE;
+const DOMINATION_THRESHOLD = 0.70;
 const rooms = {};
 
 // ─── HELPERS ────────────────────────────────────────────────────────
@@ -43,10 +45,10 @@ function generateRoomCode() {
 // ─── HEX MATH (odd-r offset, pointy-top) ───────────────────────────
 function getHexNeighbours(row, col) {
   const dirs = row % 2 === 0
-    ? [[-1,-1],[-1,0],[0,1],[1,0],[1,-1],[0,-1]]
-    : [[-1,0],[-1,1],[0,1],[1,1],[1,0],[0,-1]];
-  return dirs.map(([dr,dc]) => [row+dr, col+dc])
-    .filter(([r,c]) => r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE);
+    ? [[-1, -1], [-1, 0], [0, 1], [1, 0], [1, -1], [0, -1]]
+    : [[-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [0, -1]];
+  return dirs.map(([dr, dc]) => [row + dr, col + dc])
+    .filter(([r, c]) => r >= 0 && r < MAP_SIZE && c >= 0 && c < MAP_SIZE);
 }
 
 function hexToCube(row, col) {
@@ -88,7 +90,6 @@ function generateMap() {
       if (map[r][c].type !== 'empty') continue;
       map[r][c].type = zone.type;
       map[r][c].resourceType = zone.type;
-      // cluster: also mark 1-2 neighbours
       const neighbours = getHexNeighbours(r, c);
       const extra = 1 + Math.floor(Math.random() * 2);
       for (let i = 0; i < Math.min(extra, neighbours.length); i++) {
@@ -106,7 +107,7 @@ function generateMap() {
 
 // ─── PLAYER COLOURS ─────────────────────────────────────────────────
 const PLAYER_COLOURS = [
-  '#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#1abc9c','#e91e63'
+  '#e74c3c', '#3498db', '#2ecc71', '#f1c40f', '#9b59b6', '#e67e22', '#1abc9c', '#e91e63'
 ];
 
 // ─── SPAWN PLAYER ───────────────────────────────────────────────────
@@ -118,7 +119,6 @@ function spawnPlayer(room, playerId) {
   for (let attempt = 0; attempt < 2000; attempt++) {
     const r = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
     const c = 5 + Math.floor(Math.random() * (MAP_SIZE - 10));
-    // check min 15 from other spawns
     let tooClose = false;
     for (const p of room.players) {
       if (p.id !== playerId && p.baseRow != null) {
@@ -132,7 +132,6 @@ function spawnPlayer(room, playerId) {
   if (bestRow == null) { bestRow = 5 + Math.floor(Math.random() * 70); bestCol = 5 + Math.floor(Math.random() * 70); }
   player.baseRow = bestRow;
   player.baseCol = bestCol;
-  // claim 5x5 area
   for (let dr = -2; dr <= 2; dr++) {
     for (let dc = -2; dc <= 2; dc++) {
       const nr = bestRow + dr;
@@ -150,19 +149,17 @@ function trainUnit(room, playerId, unitType) {
   if (!def) return { ok: false, msg: 'Unknown unit type' };
   const player = room.players.find(p => p.id === playerId);
   if (!player) return { ok: false, msg: 'Player not found' };
-  // check required zone ownership
+  if (player.eliminated) return { ok: false, msg: 'You are eliminated' };
   const map = room.gameState.map;
   let hasZone = false;
   for (let r = 0; r < MAP_SIZE && !hasZone; r++)
     for (let c = 0; c < MAP_SIZE && !hasZone; c++)
       if (map[r][c].owner === playerId && map[r][c].type === def.requiredZone) hasZone = true;
   if (!hasZone) return { ok: false, msg: `Need a ${def.requiredZone} zone` };
-  // check resources
   for (const [res, amt] of Object.entries(def.cost)) {
     if ((player.resources[res] || 0) < amt) return { ok: false, msg: `Not enough ${res}` };
   }
   if (player.trainingQueue.length >= 5) return { ok: false, msg: 'Queue full (max 5)' };
-  // deduct
   for (const [res, amt] of Object.entries(def.cost)) player.resources[res] -= amt;
   player.trainingQueue.push({ unitType, startTime: Date.now(), duration: def.trainTime, id: generateUniqueId() });
   return { ok: true };
@@ -171,6 +168,7 @@ function trainUnit(room, playerId, unitType) {
 function processTrainingQueues(room) {
   const now = Date.now();
   for (const player of room.players) {
+    if (player.eliminated) continue;
     while (player.trainingQueue.length > 0) {
       const item = player.trainingQueue[0];
       if (now - item.startTime >= item.duration) {
@@ -193,7 +191,7 @@ function processTrainingQueues(room) {
         io.to(player.id).emit('unitTrained', { unitType: item.unitType, unitId: unit.id });
         io.to(room.code).emit('unitSpawned', unit);
       } else {
-        break; // queue is ordered
+        break;
       }
     }
   }
@@ -204,8 +202,8 @@ function generateResources(room) {
   const map = room.gameState.map;
   const resMap = { forest: 'wood', factory: 'steel', oil: 'fuel', port: 'supplies', lab: 'research' };
   for (const player of room.players) {
-    if (!player.isConnected) continue;
-    const gains = { wood:0, steel:0, fuel:0, supplies:0, research:0 };
+    if (!player.isConnected || player.eliminated) continue;
+    const gains = { wood: 0, steel: 0, fuel: 0, supplies: 0, research: 0 };
     for (let r = 0; r < MAP_SIZE; r++) {
       for (let c = 0; c < MAP_SIZE; c++) {
         if (map[r][c].owner === player.id && map[r][c].resourceType) {
@@ -214,92 +212,258 @@ function generateResources(room) {
         }
       }
     }
-    for (const k of Object.keys(gains)) player.resources[k] += gains[k];
+    for (const k of Object.keys(gains)) {
+      player.resources[k] += gains[k];
+      player.stats.resourcesGathered += gains[k];
+    }
     io.to(player.id).emit('resourceUpdate', player.resources);
   }
 }
 
-// ─── PATHFINDING (BFS on hex grid) ──────────────────────────────────
-function findPath(map, startR, startC, endR, endC, canFly, canWater) {
+// ─── ENHANCED PATHFINDING (BFS on hex grid) ─────────────────────────
+function findPath(map, startR, startC, endR, endC, unitType) {
   if (startR === endR && startC === endC) return [];
-  const key = (r,c) => `${r},${c}`;
+  const def = UNIT_TYPES[unitType] || {};
+  const canFly = !!def.canFlyOver;
+  const canWater = !!def.canCrossWater;
+
+  const key = (r, c) => `${r},${c}`;
   const visited = new Set();
-  const queue = [[startR, startC, []]];
+  // BFS with parent tracking for efficiency
+  const queue = [[startR, startC]];
+  const parent = {};
   visited.add(key(startR, startC));
+  let found = false;
+
   while (queue.length > 0) {
-    const [r, c, path] = queue.shift();
+    const [r, c] = queue.shift();
     for (const [nr, nc] of getHexNeighbours(r, c)) {
       const k = key(nr, nc);
       if (visited.has(k)) continue;
       visited.add(k);
       const tile = map[nr][nc];
-      // water tiles block non-marine non-helicopter
-      if (tile.type === 'port' && !canFly && !canWater) continue;
-      const newPath = [...path, { row: nr, col: nc }];
-      if (nr === endR && nc === endC) return newPath;
-      if (newPath.length > 60) continue; // max path length
-      queue.push([nr, nc, newPath]);
+
+      // Helicopters can fly over anything
+      if (canFly) { /* no blocking */ }
+      // Marines can cross water
+      else if (canWater) { /* no blocking */ }
+      // All other units blocked by water/port hexes
+      else if (tile.type === 'port') continue;
+
+      parent[k] = key(r, c);
+      if (nr === endR && nc === endC) { found = true; break; }
+      // max path depth
+      queue.push([nr, nc]);
     }
+    if (found) break;
+    // safety: limit BFS scope
+    if (visited.size > 4000) break;
   }
-  return null; // no path found
+
+  if (!found) return null;
+
+  // reconstruct path
+  const path = [];
+  let cur = key(endR, endC);
+  while (cur !== key(startR, startC)) {
+    const [cr, cc] = cur.split(',').map(Number);
+    path.unshift({ row: cr, col: cc });
+    cur = parent[cur];
+    if (!cur) return null;
+  }
+  return path.length > 80 ? path.slice(0, 80) : path;
 }
 
-// ─── COMBAT ─────────────────────────────────────────────────────────
-function processCombat(room) {
-  const units = room.gameState.units;
-  const toRemove = new Set();
+// ─── ENHANCED COMBAT ────────────────────────────────────────────────
+function handleCombat(room, attacker, defender) {
+  const atkDef = UNIT_TYPES[attacker.type];
+  const defDef = UNIT_TYPES[defender.type];
+  if (!atkDef || !defDef) return;
+
+  const map = room.gameState.map;
+  const dist = hexDistance(attacker.row, attacker.col, defender.row, defender.col);
+
+  // ── Decoy: dies in one hit
+  if (defDef.isDecoy) {
+    defender.currentHealth = 0;
+    io.to(room.code).emit('decoyRevealed', { unitId: defender.id, attackerId: attacker.id, msg: 'DECOY!' });
+    removeUnit(room, defender);
+    attacker.owner && addKill(room, attacker.owner);
+    // claim hex
+    if (map[defender.row] && map[defender.row][defender.col]) {
+      map[defender.row][defender.col].owner = attacker.owner;
+      io.to(room.code).emit('hexCaptured', { r: defender.row, c: defender.col, owner: attacker.owner });
+    }
+    return;
+  }
+
+  // ── EMP Drone contact: freeze all enemies nearby, destroy drone
+  if (atkDef.empRange && dist <= 1) {
+    const frozenIds = [];
+    for (const u of room.gameState.units) {
+      if (u.owner === attacker.owner) continue;
+      if (hexDistance(attacker.row, attacker.col, u.row, u.col) <= atkDef.empRange) {
+        // tankShield bonus: tanks immune to first EMP
+        const defPlayer = room.players.find(p => p.id === u.owner);
+        if (u.type === 'TANK' && defPlayer && defPlayer.activeBonuses.includes('tankShield') && !u.empHitOnce) {
+          u.empHitOnce = true;
+          continue;
+        }
+        u.frozen = true;
+        u.frozenUntil = Date.now() + (atkDef.empDuration || 6000);
+        frozenIds.push(u.id);
+      }
+    }
+    io.to(room.code).emit('empDetonated', { droneId: attacker.id, frozenUnitIds: frozenIds, row: attacker.row, col: attacker.col });
+    attacker.currentHealth = 0;
+    removeUnit(room, attacker);
+    return;
+  }
+
+  // ── Helicopter: only takes damage when landed
+  if (defender.type === 'HELICOPTER' && !defender.landed) {
+    // attacker can't hit airborne helicopter, but helicopter can still attack
+    let hpDmg = atkDef.attack;
+    // only helicopter attacks if in range
+    if (dist <= (defDef.attackRange || 1)) {
+      attacker.currentHealth -= defDef.attack;
+    }
+    // helicopter takes no damage when airborne
+    emitCombat(room, attacker, defender);
+    if (attacker.currentHealth <= 0) {
+      removeUnit(room, attacker);
+      addKill(room, defender.owner);
+    }
+    return;
+  }
+
+  // ── Calculate damage modifiers
+  let atkDmg = atkDef.attack;
+  let defDmg = defDef.attack;
+
+  // Tank vs Infantry: tank deals double damage
+  if (attacker.type === 'TANK' && defender.type === 'INFANTRY') atkDmg *= 2;
+  if (defender.type === 'TANK' && attacker.type === 'INFANTRY') defDmg *= 2;
+
+  // Scout vs Tank: scout takes triple damage from tank
+  if (attacker.type === 'SCOUT' && defender.type === 'TANK') defDmg *= 3;
+  if (defender.type === 'SCOUT' && attacker.type === 'TANK') atkDmg *= 3;
+
+  // Archer range 2: full damage, stays in place
+  if (attacker.type === 'ARCHER' && dist <= 2 && dist > 0) {
+    // archer attacks at range, defender can't retaliate if out of range
+    defender.currentHealth -= atkDmg;
+    if (dist > (defDef.attackRange || 1)) defDmg = 0;
+  }
+
+  // Artillery: area attack
+  if (atkDef.areaAttack) {
+    // check minRange
+    if (dist < (atkDef.minRange || 0)) {
+      // can't attack too close
+      return;
+    }
+    // hit target
+    defender.currentHealth -= atkDmg;
+    // splash: hit all 6 adjacent hexes of target
+    for (const u of room.gameState.units) {
+      if (u.id === defender.id || u.owner === attacker.owner) continue;
+      if (hexDistance(defender.row, defender.col, u.row, u.col) <= 1) {
+        u.currentHealth -= Math.floor(atkDmg * 0.4);
+        if (u.currentHealth <= 0) {
+          removeUnit(room, u);
+          addKill(room, attacker.owner);
+        }
+      }
+    }
+    // artillery doesn't take counter-attack at range
+    defDmg = 0;
+  } else if (attacker.type !== 'ARCHER' || dist <= 1) {
+    // normal simultaneous damage
+    defender.currentHealth -= atkDmg;
+  }
+
+  // defender retaliates if in range and has attack
+  if (defDmg > 0 && dist <= (defDef.attackRange || 1)) {
+    attacker.currentHealth -= defDmg;
+  }
+
+  emitCombat(room, attacker, defender);
+
+  // remove dead units
+  if (defender.currentHealth <= 0) {
+    removeUnit(room, defender);
+    addKill(room, attacker.owner);
+    // attacker claims hex
+    if (map[defender.row] && map[defender.row][defender.col]) {
+      map[defender.row][defender.col].owner = attacker.owner;
+      io.to(room.code).emit('hexCaptured', { r: defender.row, c: defender.col, owner: attacker.owner });
+    }
+  }
+  if (attacker.currentHealth <= 0) {
+    removeUnit(room, attacker);
+    addKill(room, defender.owner);
+  }
+}
+
+function emitCombat(room, attacker, defender) {
+  io.to(room.code).emit('combatResult', {
+    attacker: { id: attacker.id, type: attacker.type, owner: attacker.owner, hp: attacker.currentHealth, row: attacker.row, col: attacker.col },
+    defender: { id: defender.id, type: defender.type, owner: defender.owner, hp: defender.currentHealth, row: defender.row, col: defender.col }
+  });
+}
+
+function removeUnit(room, unit) {
+  const player = room.players.find(p => p.id === unit.owner);
+  if (player) player.stats.unitsLost++;
+  room.gameState.units = room.gameState.units.filter(u => u.id !== unit.id);
+  io.to(room.code).emit('unitsDestroyed', [unit.id]);
+}
+
+function addKill(room, playerId) {
+  const player = room.players.find(p => p.id === playerId);
+  if (player) player.stats.unitsKilled++;
+}
+
+// ─── AUTO-COMBAT (range-based, every tick) ──────────────────────────
+function processAutoCombat(room) {
+  const units = [...room.gameState.units]; // snapshot
+  const attacked = new Set();
   for (const unit of units) {
-    if (toRemove.has(unit.id)) continue;
-    if (unit.frozen) continue;
+    if (!room.gameState.units.includes(unit)) continue; // already removed
+    if (unit.frozen || attacked.has(unit.id)) continue;
     const def = UNIT_TYPES[unit.type];
     if (!def || def.attack <= 0) continue;
-    // find nearest enemy in range
+
+    // find nearest enemy in attack range
     let target = null, bestDist = Infinity;
-    for (const other of units) {
-      if (other.owner === unit.owner || toRemove.has(other.id)) continue;
+    for (const other of room.gameState.units) {
+      if (other.owner === unit.owner || attacked.has(other.id)) continue;
       const d = hexDistance(unit.row, unit.col, other.row, other.col);
-      if (d <= (def.attackRange || 1)) {
-        if (def.minRange && d < def.minRange) continue;
-        if (d < bestDist) { bestDist = d; target = other; }
+      const maxRange = def.attackRange || 1;
+      const minRange = def.minRange || 0;
+      if (d <= maxRange && d >= minRange && d < bestDist) {
+        bestDist = d;
+        target = other;
       }
     }
     if (target) {
-      target.currentHealth -= def.attack;
-      if (def.areaAttack) {
-        // splash damage to neighbours of target
-        for (const other of units) {
-          if (other.id === target.id || other.owner === unit.owner || toRemove.has(other.id)) continue;
-          if (hexDistance(target.row, target.col, other.row, other.col) <= 1) {
-            other.currentHealth -= Math.floor(def.attack * 0.4);
-          }
-        }
-      }
-      // EMP effect
-      if (def.empRange) {
-        for (const other of units) {
-          if (other.owner === unit.owner) continue;
-          if (hexDistance(unit.row, unit.col, other.row, other.col) <= def.empRange) {
-            other.frozen = true;
-            other.frozenUntil = Date.now() + (def.empDuration || 6000);
-          }
-        }
-      }
-      if (target.currentHealth <= 0) toRemove.add(target.id);
+      attacked.add(unit.id);
+      attacked.add(target.id);
+      handleCombat(room, unit, target);
     }
-  }
-  // remove dead
-  room.gameState.units = units.filter(u => !toRemove.has(u.id));
-  if (toRemove.size > 0) {
-    io.to(room.code).emit('unitsDestroyed', Array.from(toRemove));
   }
 }
 
-// ─── MOVEMENT ───────────────────────────────────────────────────────
-function processMovement(room) {
+// ─── ENHANCED MOVEMENT (100ms tick) ─────────────────────────────────
+function processUnitMovement(room) {
   const now = Date.now();
   const map = room.gameState.map;
-  for (const unit of room.gameState.units) {
-    // unfreeze
+  const unitsSnapshot = [...room.gameState.units];
+
+  for (const unit of unitsSnapshot) {
+    if (!room.gameState.units.includes(unit)) continue; // removed mid-loop
+    // unfreeze check
     if (unit.frozen && unit.frozenUntil && now >= unit.frozenUntil) {
       unit.frozen = false;
       unit.frozenUntil = null;
@@ -307,25 +471,239 @@ function processMovement(room) {
     if (unit.frozen) continue;
     if (unit.targetPath.length === 0) continue;
     const def = UNIT_TYPES[unit.type];
+    if (!def) continue;
     if (now - unit.lastMoveTime < def.moveInterval) continue;
-    const next = unit.targetPath.shift();
+
+    const next = unit.targetPath[0];
+    const tile = map[next.row][next.col];
+
+    // Check for enemy unit at destination
+    const enemyAtDest = room.gameState.units.find(u =>
+      u.owner !== unit.owner && u.row === next.row && u.col === next.col
+    );
+
+    if (enemyAtDest) {
+      // combat instead of moving
+      handleCombat(room, unit, enemyAtDest);
+      // if attacker survived and enemy died, continue path
+      if (room.gameState.units.includes(unit) && !room.gameState.units.includes(enemyAtDest)) {
+        unit.targetPath.shift();
+        unit.row = next.row;
+        unit.col = next.col;
+        unit.lastMoveTime = now;
+        map[next.row][next.col].owner = unit.owner;
+        io.to(room.code).emit('unitMoved', { id: unit.id, row: next.row, col: next.col });
+        io.to(room.code).emit('hexCaptured', { r: next.row, c: next.col, owner: unit.owner });
+      } else {
+        // combat happened, clear path if attacker died or enemy survived
+        if (room.gameState.units.includes(unit)) {
+          unit.targetPath = []; // stop, enemy blocks
+        }
+      }
+      continue;
+    }
+
+    // Move one step
+    unit.targetPath.shift();
+    const prevRow = unit.row, prevCol = unit.col;
     unit.row = next.row;
     unit.col = next.col;
     unit.lastMoveTime = now;
-    // capture hex
-    if (map[next.row][next.col].owner !== unit.owner) {
-      map[next.row][next.col].owner = unit.owner;
+
+    // Hex ownership
+    if (tile.owner !== unit.owner) {
+      const prevOwner = tile.owner;
+      tile.owner = unit.owner;
+      io.to(room.code).emit('hexCaptured', { r: next.row, c: next.col, owner: unit.owner, prevOwner });
     }
+
+    io.to(room.code).emit('unitMoved', { id: unit.id, row: next.row, col: next.col });
+  }
+}
+
+// ─── COMBINATION BONUSES ────────────────────────────────────────────
+function checkCombinationBonuses(room) {
+  const map = room.gameState.map;
+
+  for (const player of room.players) {
+    if (player.eliminated) continue;
+
+    // determine which zone types this player owns
+    const ownedZones = new Set();
+    for (let r = 0; r < MAP_SIZE; r++) {
+      for (let c = 0; c < MAP_SIZE; c++) {
+        if (map[r][c].owner === player.id && map[r][c].type !== 'empty') {
+          ownedZones.add(map[r][c].type);
+        }
+      }
+    }
+
+    const newBonuses = [];
+
+    // Forest + Lab → ghostScouts: scouts invisible to enemies
+    if (ownedZones.has('forest') && ownedZones.has('lab')) newBonuses.push('ghostScouts');
+
+    // Oil + Factory → armouredHelicopters: helicopters +100hp and area attack
+    if (ownedZones.has('oil') && ownedZones.has('factory')) newBonuses.push('armouredHelicopters');
+
+    // Port + Forest → amphibiousArchers: archers can cross water
+    if (ownedZones.has('port') && ownedZones.has('forest')) newBonuses.push('amphibiousArchers');
+
+    // Lab + Factory → tankShield: tanks immune to first EMP hit
+    if (ownedZones.has('lab') && ownedZones.has('factory')) newBonuses.push('tankShield');
+
+    // Oil + Lab → stealthDrones: EMP drones invisible to enemies
+    if (ownedZones.has('oil') && ownedZones.has('lab')) newBonuses.push('stealthDrones');
+
+    // Port + Oil → navalArtillery: marines can call artillery strike every 30s within 5 hex range
+    if (ownedZones.has('port') && ownedZones.has('oil')) newBonuses.push('navalArtillery');
+
+    // Apply armoured helicopter bonus
+    if (newBonuses.includes('armouredHelicopters') && !player.activeBonuses.includes('armouredHelicopters')) {
+      for (const u of room.gameState.units) {
+        if (u.owner === player.id && u.type === 'HELICOPTER') {
+          u.currentHealth += 100;
+        }
+      }
+    }
+    // Remove armoured helicopter bonus if lost
+    if (!newBonuses.includes('armouredHelicopters') && player.activeBonuses.includes('armouredHelicopters')) {
+      for (const u of room.gameState.units) {
+        if (u.owner === player.id && u.type === 'HELICOPTER') {
+          u.currentHealth = Math.min(u.currentHealth, UNIT_TYPES.HELICOPTER.health);
+        }
+      }
+    }
+
+    // check if bonuses changed
+    const oldStr = player.activeBonuses.sort().join(',');
+    const newStr = newBonuses.sort().join(',');
+    if (oldStr !== newStr) {
+      player.activeBonuses = newBonuses;
+      io.to(player.id).emit('bonusUpdate', { bonuses: newBonuses });
+    }
+  }
+}
+
+// ─── VICTORY CONDITIONS ─────────────────────────────────────────────
+function checkVictory(room) {
+  if (room.gameOver) return;
+  const map = room.gameState.map;
+
+  // count hexes per player
+  const hexCount = {};
+  for (const p of room.players) hexCount[p.id] = 0;
+  for (let r = 0; r < MAP_SIZE; r++) {
+    for (let c = 0; c < MAP_SIZE; c++) {
+      if (map[r][c].owner && hexCount[map[r][c].owner] !== undefined) {
+        hexCount[map[r][c].owner]++;
+      }
+    }
+  }
+
+  // update stats
+  for (const p of room.players) {
+    p.stats.hexesOwned = hexCount[p.id] || 0;
+  }
+
+  // check base capture → elimination
+  for (const player of room.players) {
+    if (player.eliminated) continue;
+    if (player.baseRow == null) continue;
+    const baseTile = map[player.baseRow][player.baseCol];
+    if (baseTile.owner !== player.id && baseTile.owner !== null) {
+      // player eliminated!
+      player.eliminated = true;
+      // remove their units
+      room.gameState.units = room.gameState.units.filter(u => u.owner !== player.id);
+      // turn territory grey
+      for (let r = 0; r < MAP_SIZE; r++) {
+        for (let c = 0; c < MAP_SIZE; c++) {
+          if (map[r][c].owner === player.id) map[r][c].owner = null;
+        }
+      }
+      io.to(room.code).emit('playerEliminated', { playerId: player.id, name: player.name, eliminatedBy: baseTile.owner });
+      console.log(`${player.name} eliminated!`);
+    }
+  }
+
+  const alivePlayers = room.players.filter(p => !p.eliminated);
+
+  // domination victory: 70%+ of map
+  for (const p of alivePlayers) {
+    if ((hexCount[p.id] || 0) >= TOTAL_HEXES * DOMINATION_THRESHOLD) {
+      endGame(room, p, 'domination');
+      return;
+    }
+  }
+
+  // last player standing
+  if (alivePlayers.length === 1 && room.players.length > 1) {
+    endGame(room, alivePlayers[0], 'last_standing');
+    return;
+  }
+
+  // all eliminated (shouldn't happen but safety)
+  if (alivePlayers.length === 0 && room.players.length > 0) {
+    endGame(room, null, 'draw');
+  }
+}
+
+function endGame(room, winner, reason) {
+  room.gameOver = true;
+  clearInterval(room.gameLoopInterval);
+  clearInterval(room.movementInterval);
+  clearInterval(room.resourceInterval);
+  clearInterval(room.bonusInterval);
+  clearInterval(room.victoryInterval);
+
+  const duration = Date.now() - room.startTime;
+  const stats = {};
+  for (const p of room.players) {
+    stats[p.id] = {
+      name: p.name,
+      colour: p.colour,
+      hexesOwned: p.stats.hexesOwned,
+      unitsKilled: p.stats.unitsKilled,
+      unitsLost: p.stats.unitsLost,
+      resourcesGathered: p.stats.resourcesGathered,
+      eliminated: !!p.eliminated
+    };
+  }
+
+  io.to(room.code).emit('gameOver', {
+    winner: winner ? { id: winner.id, name: winner.name, colour: winner.colour } : null,
+    reason,
+    duration,
+    stats
+  });
+  console.log(`Game over in room ${room.code}: ${winner ? winner.name : 'Draw'} (${reason})`);
+}
+
+// ─── REPLAY BUFFER ──────────────────────────────────────────────────
+function captureSnapshot(room) {
+  if (!room.replayBuffer) room.replayBuffer = [];
+  const snapshot = {
+    timestamp: Date.now(),
+    units: room.gameState.units.map(u => ({ id: u.id, type: u.type, owner: u.owner, row: u.row, col: u.col, hp: u.currentHealth, frozen: u.frozen })),
+  };
+  room.replayBuffer.push(snapshot);
+  // keep last 60 seconds (~120 snapshots at 500ms)
+  const cutoff = Date.now() - 60000;
+  while (room.replayBuffer.length > 0 && room.replayBuffer[0].timestamp < cutoff) {
+    room.replayBuffer.shift();
   }
 }
 
 // ─── GAME LOOP ──────────────────────────────────────────────────────
 function startGameLoop(room) {
+  room.startTime = Date.now();
+
+  // Main tick every 500ms — training, auto-combat, state broadcast
   room.gameLoopInterval = setInterval(() => {
     processTrainingQueues(room);
-    processMovement(room);
-    processCombat(room);
-    // send state snapshot every tick
+    processAutoCombat(room);
+    captureSnapshot(room);
     const snapshot = {
       units: room.gameState.units,
       mapOwnership: getOwnershipChanges(room)
@@ -333,13 +711,28 @@ function startGameLoop(room) {
     io.to(room.code).emit('gameUpdate', snapshot);
   }, 500);
 
+  // Movement tick every 100ms — smooth unit movement
+  room.movementInterval = setInterval(() => {
+    processUnitMovement(room);
+  }, 100);
+
+  // Resource generation every 3000ms
   room.resourceInterval = setInterval(() => {
     generateResources(room);
   }, 3000);
+
+  // Combination bonuses every 5000ms
+  room.bonusInterval = setInterval(() => {
+    checkCombinationBonuses(room);
+  }, 5000);
+
+  // Victory check every 5000ms
+  room.victoryInterval = setInterval(() => {
+    checkVictory(room);
+  }, 5000);
 }
 
 function getOwnershipChanges(room) {
-  // send compact ownership map
   const changes = [];
   const map = room.gameState.map;
   for (let r = 0; r < MAP_SIZE; r++) {
@@ -370,10 +763,15 @@ io.on('connection', (socket) => {
         baseRow: null,
         baseCol: null,
         activeBonuses: [],
-        isConnected: true
+        isConnected: true,
+        eliminated: false,
+        stats: { hexesOwned: 0, unitsKilled: 0, unitsLost: 0, resourcesGathered: 0 }
       }],
       gameState: { map: generateMap(), units: [] },
-      isStarted: false
+      isStarted: false,
+      gameOver: false,
+      replayBuffer: [],
+      startTime: null
     };
     rooms[code] = room;
     socket.join(code);
@@ -398,7 +796,9 @@ io.on('connection', (socket) => {
       baseRow: null,
       baseCol: null,
       activeBonuses: [],
-      isConnected: true
+      isConnected: true,
+      eliminated: false,
+      stats: { hexesOwned: 0, unitsKilled: 0, unitsLost: 0, resourcesGathered: 0 }
     });
     socket.join(code);
     socket.roomCode = code;
@@ -415,13 +815,11 @@ io.on('connection', (socket) => {
     if (room.isStarted) return;
     room.isStarted = true;
     for (const player of room.players) spawnPlayer(room, player.id);
-    // send full map + player data
     const playerData = room.players.map(p => ({
       id: p.id, name: p.name, colour: p.colour,
       baseRow: p.baseRow, baseCol: p.baseCol,
       resources: p.resources
     }));
-    // compress map for transport: send tile types and owners
     const mapData = [];
     for (let r = 0; r < MAP_SIZE; r++) {
       mapData[r] = [];
@@ -453,8 +851,7 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     const unit = room.gameState.units.find(u => u.id === data.unitId && u.owner === socket.id);
     if (!unit) return;
-    const def = UNIT_TYPES[unit.type];
-    const path = findPath(room.gameState.map, unit.row, unit.col, data.row, data.col, def.canFlyOver, def.canCrossWater);
+    const path = findPath(room.gameState.map, unit.row, unit.col, data.row, data.col, unit.type);
     if (path) unit.targetPath = path;
   });
 
@@ -467,10 +864,47 @@ io.on('connection', (socket) => {
     for (const uid of unitIds) {
       const unit = room.gameState.units.find(u => u.id === uid && u.owner === socket.id);
       if (!unit) continue;
-      const def = UNIT_TYPES[unit.type];
-      const path = findPath(room.gameState.map, unit.row, unit.col, row, col, def.canFlyOver, def.canCrossWater);
+      const path = findPath(room.gameState.map, unit.row, unit.col, row, col, unit.type);
       if (path) unit.targetPath = path;
     }
+  });
+
+  // Naval artillery strike (bonus)
+  socket.on('navalStrike', (data) => {
+    const code = socket.roomCode;
+    if (!code || !rooms[code] || !rooms[code].isStarted) return;
+    const room = rooms[code];
+    const player = room.players.find(p => p.id === socket.id);
+    if (!player || !player.activeBonuses.includes('navalArtillery')) return;
+    // cooldown check
+    const now = Date.now();
+    if (player.lastNavalStrike && now - player.lastNavalStrike < 30000) {
+      return socket.emit('trainError', { msg: 'Naval strike on cooldown' });
+    }
+    // find a marine
+    const marine = room.gameState.units.find(u => u.owner === socket.id && u.type === 'MARINE');
+    if (!marine) return socket.emit('trainError', { msg: 'Need a marine for naval strike' });
+    // check range
+    if (hexDistance(marine.row, marine.col, data.row, data.col) > 5) {
+      return socket.emit('trainError', { msg: 'Target out of range (5 hexes from marine)' });
+    }
+    player.lastNavalStrike = now;
+    // deal artillery damage to target and surrounding hexes
+    const hitHexes = [[data.row, data.col], ...getHexNeighbours(data.row, data.col)];
+    for (const u of [...room.gameState.units]) {
+      if (u.owner === socket.id) continue;
+      for (const [hr, hc] of hitHexes) {
+        if (u.row === hr && u.col === hc) {
+          u.currentHealth -= 60;
+          if (u.currentHealth <= 0) {
+            removeUnit(room, u);
+            addKill(room, socket.id);
+          }
+          break;
+        }
+      }
+    }
+    io.to(room.code).emit('navalStrikeEffect', { row: data.row, col: data.col, ownerId: socket.id });
   });
 
   socket.on('disconnect', () => {
@@ -480,11 +914,13 @@ io.on('connection', (socket) => {
     const room = rooms[code];
     const player = room.players.find(p => p.id === socket.id);
     if (player) player.isConnected = false;
-    // remove player
     room.players = room.players.filter(p => p.id !== socket.id);
     if (room.players.length === 0) {
       clearInterval(room.gameLoopInterval);
+      clearInterval(room.movementInterval);
       clearInterval(room.resourceInterval);
+      clearInterval(room.bonusInterval);
+      clearInterval(room.victoryInterval);
       delete rooms[code];
       console.log(`Room ${code} deleted`);
     } else {
